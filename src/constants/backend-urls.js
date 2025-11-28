@@ -1,6 +1,6 @@
 console.log("BASE_URL =", process.env.NEXT_PUBLIC_BACKEND_URL);
 
-export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+export const BASE_URL = "https://plumate-slippery-shayla-ngrok-free.dev";
 
 /* ============================================================
    AUTH
@@ -146,3 +146,5 @@ export const address_save_url = `${BASE_URL}/aimdev/api/address/save`;
 ============================================================ */
 export const invoice_download_url = (orderId) =>
   `${BASE_URL}/aimdev/api/invoice/download/${orderId}`;
+
+
