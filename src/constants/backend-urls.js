@@ -1,6 +1,6 @@
 console.log("BASE_URL =", process.env.NEXT_PUBLIC_BACKEND_URL);
 
-export const BASE_URL = "https://plumate-slippery-shayla-ngrok-free.dev";
+export const BASE_URL = "https://plumate-slippery-shayla.ngrok-free.dev";
 
 /* ============================================================
    AUTH
