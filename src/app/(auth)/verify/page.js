@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+export const runtime = "nodejs";
+
+
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { verify_email_url } from "@/constants/backend-urls";
-import { useUserStore } from "@/store/user-store";
+
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -29,7 +35,7 @@ export default function VerifyPage() {
         if (res.data.status === "SUCCESS") {
           toast.success("Email verified successfully!");
 
-          // 🔥 FORCE LOGOUT RIGHT AFTER VERIFICATION
+          //  FORCE LOGOUT RIGHT AFTER VERIFICATION
           logout();
 
           setTimeout(() => {
