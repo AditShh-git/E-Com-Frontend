@@ -6,9 +6,9 @@ import axios from "axios";
 import { toast } from "sonner";
 import { reset_password_url } from "@/constants/backend-urls.js";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
+// export const dynamic = "force-dynamic";
+// export const fetchCache = "force-no-store";
+// export const revalidate = 0;
 
 function ResetPasswordClient() {
   const router = useRouter();
