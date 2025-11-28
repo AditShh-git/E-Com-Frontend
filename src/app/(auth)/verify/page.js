@@ -1,34 +1,21 @@
-import { Suspense } from "react";
-
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
-
-function VerifyPageWrapper() {
-  return (
-    <Suspense fallback={<div className="text-xl">Verifying...</div>}>
-      <VerifyClient />
-    </Suspense>
-  );
-}
-
-export default VerifyPageWrapper;
-
-// ---------------- CLIENT COMPONENT BELOW ----------------
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { verify_email_url } from "@/constants/backend-urls";
 import { useUserStore } from "@/store/userStore";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 function VerifyClient() {
   const router = useRouter();
   const params = useSearchParams();
   const logout = useUserStore((s) => s.logout);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,7 +34,6 @@ function VerifyClient() {
         if (res.data.status === "SUCCESS") {
           toast.success("Email verified successfully!");
           logout();
-
           setTimeout(() => router.push("/signin"), 1500);
         } else {
           toast.error(res.data.message || "Verification failed.");
@@ -66,5 +52,13 @@ function VerifyClient() {
     <div className="flex justify-center items-center min-h-screen text-xl">
       {loading ? "Verifying email..." : "Redirecting..."}
     </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div className="text-xl">Loading...</div>}>
+      <VerifyClient />
+    </Suspense>
   );
 }

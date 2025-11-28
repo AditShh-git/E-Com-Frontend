@@ -1,18 +1,16 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
-export const runtime = "nodejs";
-
-
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { reset_password_url } from "@/constants/backend-urls.js";
 
-export default function ResetPassword() {
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
+function ResetPasswordClient() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -35,15 +33,8 @@ export default function ResetPassword() {
     try {
       const res = await axios.post(
         reset_password_url,
-        {
-          token,
-          newPassword: password,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        { token, newPassword: password },
+        { headers: { "Content-Type": "application/json" } }
       );
 
       if (res.data.status === "SUCCESS") {
@@ -99,5 +90,13 @@ export default function ResetPassword() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div className="text-xl">Loading...</div>}>
+      <ResetPasswordClient />
+    </Suspense>
   );
 }
