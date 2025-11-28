@@ -2,14 +2,12 @@
 
 import ProductForm from "../product-form";
 import axios from "axios";
-import { seller_add_product_url, seller_product_list_url } from "@/constants/backend-urls";
+import { seller_add_product_url } from "@/constants/backend-urls";
 import { getToken } from "@/utils/sellerApi";
 import { useEffect, useState } from "react";
-import SellerBlocked from "@/components/ui-components/SellerBlocked";
 
 export default function AddProductPage() {
   const [categories, setCategories] = useState([]);
-  const [blocked, setBlocked] = useState(false);
 
   const emptyProduct = {
     name: "",
@@ -23,26 +21,8 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    checkSellerStatus();   // <-- ✔ REQUIRED
     fetchCategories();
   }, []);
-
-  async function checkSellerStatus() {
-    const token = getToken();
-
-    try {
-      await axios.get(seller_product_list_url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setBlocked(false);
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status === 403) {
-        setBlocked(true);
-      }
-    }
-  }
 
   const fetchCategories = async () => {
     try {
@@ -57,6 +37,8 @@ export default function AddProductPage() {
   };
 
   const handleSubmit = async (form) => {
+    console.log("ADD-PRODUCT HANDLE SUBMIT FIRED ✔");
+
     const token = getToken();
 
     try {
@@ -80,38 +62,21 @@ export default function AddProductPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const productId = createRes?.data?.data?.product?.docId;
-      if (!productId) return;
-
       alert("Product created successfully!");
       window.location.href = "/seller-dashboard?tab=products";
 
     } catch (err) {
-      const status = err?.response?.status;
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        "";
-
-      if (status === 403 || msg.includes("pending admin approval")) {
-        setBlocked(true);
-        return;
-      }
-
-      console.error(err);
+      console.error("ADD PRODUCT ERROR:", err);
+      alert("Error creating product");
     }
   };
 
   return (
-    <>
-      {blocked && <SellerBlocked />}
-
-      <ProductForm
-        mode="add"
-        initial={emptyProduct}
-        categories={categories}
-        onSubmit={handleSubmit}
-      />
-    </>
+    <ProductForm
+      mode="add"
+      initial={emptyProduct}
+      categories={categories}
+      onSubmit={handleSubmit}
+    />
   );
 }

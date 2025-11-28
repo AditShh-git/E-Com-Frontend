@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,11 @@ import { Label } from "@/components/ui/label";
 
 export default function ProductForm({ mode, initial, categories, onSubmit }) {
   const [form, setForm] = useState(initial);
+
+  // 🔥 FIX → If initial changes, update local form
+  useEffect(() => {
+    setForm(initial);
+  }, [initial]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,6 +40,7 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
 
   const submit = (e) => {
     e.preventDefault();
+    console.log("FORM SUBMITTED", form); // 🔥 Debug log
     onSubmit(form);
   };
 
@@ -44,11 +50,22 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
         {mode === "add" ? "Add Product" : "Edit Product"}
       </h2>
 
-      <form className="space-y-4" onSubmit={submit}>
+      {/* 🔥 IMPORTANT FIXED */}
+      <form
+        className="space-y-4"
+        onSubmit={submit}
+        method="POST"
+        encType="multipart/form-data"
+      >
         {/* NAME */}
         <div>
           <Label>Product Name</Label>
-          <Input name="name" value={form.name} onChange={handleChange} required />
+          <Input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+          />
         </div>
 
         {/* DESCRIPTION */}
@@ -100,7 +117,9 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
             <option value="">Select Category</option>
 
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
 
             <option value="custom">Other (Custom)</option>
@@ -117,35 +136,6 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
               onChange={handleChange}
               required
             />
-          </div>
-        )}
-
-        {/* EXISTING IMAGES (EDIT MODE) */}
-        {mode === "edit" && form.existingImages?.length > 0 && (
-          <div>
-            <Label>Existing Images</Label>
-            <div className="flex gap-3 flex-wrap mt-2">
-              {form.existingImages.map((img) => (
-                <div key={img.imageId} className="relative">
-                  <Image
-                    alt="product"
-                    src={img.url}
-                    width={90}
-                    height={90}
-                    className="rounded border object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-0 right-0"
-                    onClick={() => removeExistingImage(img.imageId)}
-                  >
-                    X
-                  </Button>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
@@ -180,6 +170,7 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
           )}
         </div>
 
+        {/* SUBMIT BUTTON */}
         <Button type="submit" className="w-full">
           {mode === "add" ? "Create Product" : "Save Changes"}
         </Button>

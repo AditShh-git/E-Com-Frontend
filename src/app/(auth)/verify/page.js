@@ -5,12 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { verify_email_url } from "@/constants/backend-urls";
-import useUserStore from "@/store/user-store"; // after default export fix
+import { useUserStore } from "@/store/user-store";   // ✅ FIXED
 
 function VerifyContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const logout = useUserStore((s) => s.logout);
+  const logout = useUserStore((s) => s.logout);       // ✅ now works
 
   const [loading, setLoading] = useState(true);
 
