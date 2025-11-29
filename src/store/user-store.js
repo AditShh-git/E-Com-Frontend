@@ -1,20 +1,20 @@
-import { create } from "zustand"
-import { persist, createJSONStorage } from "zustand/middleware"
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export const useUserStore = create(
   persist(
     (set) => ({
-      user: null, // { sellerId, fullname, username, email }
+      user: null,
       isLoggedIn: false,
-      token: null, // accessToken saved here
+      token: null,
       role: null,
 
-      login: (userData, tokenData, userRole) =>
+      login: (userData, tokenData, roleData) =>
         set({
           user: userData,
           isLoggedIn: true,
           token: tokenData,
-          role: userRole
+          role: roleData,
         }),
 
       logout: () =>
@@ -22,7 +22,7 @@ export const useUserStore = create(
           user: null,
           isLoggedIn: false,
           token: null,
-          role: null
+          role: null,
         }),
     }),
     {
@@ -30,4 +30,4 @@ export const useUserStore = create(
       storage: createJSONStorage(() => localStorage),
     }
   )
-)
+);

@@ -1,65 +1,45 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { LayoutDashboard, Users, UserCheck, ShoppingBag, BarChart3, Settings, LogOut, Shield } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  UserCheck,
+  ShoppingBag,
+  BarChart3,
+  Settings,
+  LogOut,
+  Shield,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useUserStore } from "@/store/user-store";
 
 export default function AdminSidebar({ activeTab, setActiveTab }) {
-  const router = useRouter()
+  const router = useRouter();
+  const logout = useUserStore((state) => state.logout);
 
   const handleLogout = () => {
-    toast.success("Logged out",{
+    logout(); // ❗ CLEAR ZUSTAND STORE (Important)
+
+    toast.success("Logged out", {
       description: "You have been successfully logged out.",
-    })
-    router.push("/admin/login")
-  }
+    });
+
+    router.push("/admin/login");
+  };
 
   const menuItems = [
-    {
-      id: "overview",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      href: "/admin/dashboard",
-    },
-    {
-      id: "users",
-      label: "Users",
-      icon: Users,
-      href: "/admin/users",
-    },
-    {
-      id: "sellers",
-      label: "Seller Verification",
-      icon: UserCheck,
-      href: "/admin/sellers",
-    },
-    {
-      id: "products",
-      label: "Products",
-      icon: ShoppingBag,
-      href: "/admin/products",
-    },
-    {
-      id: "orders",
-      label: "Orders",
-      icon: ShoppingBag,
-      href: "/admin/orders",
-    },
-    {
-      id: "analytics",
-      label: "Analytics",
-      icon: BarChart3,
-      href: "/admin/analytics",
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      href: "/admin/settings",
-    },
-  ]
+    { id: "overview", label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
+    { id: "users", label: "Users", icon: Users, href: "/admin/users" },
+    { id: "sellers", label: "Seller Verification", icon: UserCheck, href: "/admin/sellers" },
+    { id: "products", label: "Products", icon: ShoppingBag, href: "/admin/products" },
+    { id: "orders", label: "Orders", icon: ShoppingBag, href: "/admin/orders" },
+    { id: "analytics", label: "Analytics", icon: BarChart3, href: "/admin/analytics" },
+    { id: "settings", label: "Settings", icon: Settings, href: "/admin/settings" },
+  ];
 
   return (
     <div className="flex flex-col w-64 bg-white border-r min-h-screen">
@@ -79,15 +59,17 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
         {menuItems.map((item) => {
-          const Icon = item.icon
-          const isActive = activeTab === item.id
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
 
           return (
             <Link key={item.id} href={item.href}>
               <Button
                 variant="ghost"
                 className={`w-full justify-start ${
-                  isActive ? "bg-primary/10 text-primary border-r-2 border-primary" : "hover:bg-muted"
+                  isActive
+                    ? "bg-primary/10 text-primary border-r-2 border-primary"
+                    : "hover:bg-muted"
                 }`}
                 onClick={() => setActiveTab(item.id)}
               >
@@ -95,7 +77,7 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
                 {item.label}
               </Button>
             </Link>
-          )
+          );
         })}
       </nav>
 
@@ -111,5 +93,5 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
         </Button>
       </div>
     </div>
-  )
+  );
 }
