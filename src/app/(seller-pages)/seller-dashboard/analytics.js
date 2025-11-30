@@ -25,46 +25,55 @@ export default function Analytics() {
     async function load() {
       setLoading(true);
 
+      // ===============================
+      //     FETCH ALL 3 APIs
+      // ===============================
       const overviewRes = await getSellerAnalyticsOverview();
       const salesRes = await getSellerSalesTrend();
       const productsRes = await getSellerTopProducts();
 
-      console.log("RAW Overview:", overviewRes);
-      console.log("RAW Sales:", salesRes);
-      console.log("RAW Products:", productsRes);
+      // ===============================
+      //   FIX → Correct backend data path
+      // ===============================
+      const overview =
+        overviewRes?.data?.data?.data ||
+        overviewRes?.data?.data ||
+        {};
 
-      // ===== Extract BACKEND data correctly =====
-      const overview = overviewRes?.data?.data || {};
+      const salesTrend =
+        salesRes?.data?.data?.data ||
+        salesRes?.data?.data ||
+        [];
+
+      const topProducts =
+        productsRes?.data?.data?.data ||
+        productsRes?.data?.data ||
+        [];
 
       // ===============================
-      //     TOP CARDS CALCULATIONS
+      //     TOP SUMMARY CARD VALUES
       // ===============================
-
       const totalSales = (overview.salesTrend || []).reduce(
-        (sum, item) => sum + (item.sales || 0),
-        0
+        (sum, item) => sum + (item.sales || 0), 0
       );
 
       const totalOrders = (overview.orderStatus || []).reduce(
-        (sum, item) => sum + (item.value || 0),
-        0
+        (sum, item) => sum + (item.value || 0), 0
       );
 
       const customerAcquisition = (overview.recentOrdersActivity || []).reduce(
-        (sum, item) => sum + (item.orders || 0),
-        0
+        (sum, item) => sum + (item.orders || 0), 0
       );
 
       // ===============================
-      //     CHART MAPPING
+      //         CHART MAPPING
       // ===============================
-
-      const mappedSalesTrend = (overview.salesTrend || []).map((item) => ({
+      const mappedSalesTrend = salesTrend.map((item) => ({
         day: item.day,
         revenue: item.sales,
       }));
 
-      const mappedTopProducts = (overview.topProducts || []).map((item) => ({
+      const mappedTopProducts = topProducts.map((item) => ({
         product: item.name,
         quantity: item.units,
       }));
@@ -86,8 +95,8 @@ export default function Analytics() {
   if (loading) return <p className="p-4">Loading analytics…</p>;
   if (!analytics) return <p className="p-4">Failed to load analytics.</p>;
 
-  const salesTrend = analytics.salesTrend ?? [];
-  const topProducts = analytics.topProducts ?? [];
+  const salesTrend = analytics.salesTrend || [];
+  const topProducts = analytics.topProducts || [];
 
   return (
     <TabsContent value="analytics" className="space-y-6">

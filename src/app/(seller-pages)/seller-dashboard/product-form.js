@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 export default function ProductForm({ mode, initial, categories, onSubmit }) {
   const [form, setForm] = useState(initial);
 
-  // 🔥 FIX → If initial changes, update local form
+  // Sync when initial changes (important for Edit page)
   useEffect(() => {
     setForm(initial);
   }, [initial]);
@@ -20,7 +20,7 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
   };
 
   const handleNewImages = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
     setForm((prev) => ({
       ...prev,
       newImages: [...prev.newImages, ...files],
@@ -40,7 +40,6 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
 
   const submit = (e) => {
     e.preventDefault();
-    console.log("FORM SUBMITTED", form); // 🔥 Debug log
     onSubmit(form);
   };
 
@@ -50,7 +49,6 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
         {mode === "add" ? "Add Product" : "Edit Product"}
       </h2>
 
-      {/* 🔥 IMPORTANT FIXED */}
       <form
         className="space-y-4"
         onSubmit={submit}
@@ -60,12 +58,7 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
         {/* NAME */}
         <div>
           <Label>Product Name</Label>
-          <Input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
+          <Input name="name" value={form.name} onChange={handleChange} required />
         </div>
 
         {/* DESCRIPTION */}
@@ -138,6 +131,37 @@ export default function ProductForm({ mode, initial, categories, onSubmit }) {
             />
           </div>
         )}
+
+        {/* EXISTING IMAGES (Only when editing) */}
+        {mode === "edit" &&
+          Array.isArray(form.existingImages) &&
+          form.existingImages.length > 0 && (
+            <div>
+              <Label>Existing Images</Label>
+              <div className="flex gap-3 flex-wrap mt-2">
+                {form.existingImages.map((img, i) => (
+                  <div key={i} className="relative border rounded p-1">
+                    <Image
+                      src={img.url}
+                      width={90}
+                      height={90}
+                      className="rounded object-cover"
+                      alt="existing"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-0 right-0"
+                      onClick={() => removeExistingImage(img.imageId)}
+                    >
+                      X
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         {/* NEW IMAGES */}
         <div>

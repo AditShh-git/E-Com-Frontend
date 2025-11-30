@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Minus, Plus, Trash2, CreditCard } from "lucide-react";
+import { Minus, Plus, Trash2, Heart, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import API from "@/utils/consumerApi";
-import { PUBLIC_FILE_URL } from "@/constants/backend-urls";
 import { toast } from "sonner";
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingIds, setUpdatingIds] = useState(new Set());
+  const [popupItem, setPopupItem] = useState(null);
 
+  // Normalize backend response
   const normalizeCart = (res) => {
     const r = res?.data ?? res;
 
@@ -26,25 +27,21 @@ export default function CartPage() {
     return arr || [];
   };
 
- const getImageUrl = (item) => {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_URL; 
-  let url = item?.imageUrl;
+  const getImageUrl = (item) => {
+    const backend = process.env.NEXT_PUBLIC_BACKEND_URL;
+    let url = item?.imageUrl;
 
-  if (!url) return "/placeholder.svg";
+    if (!url) return "/placeholder.svg";
 
-  // If backend returns: /api/files/103/view
-  if (url.startsWith("/api/files/")) {
-    // Insert /public and /aimdev
-    const final = url.replace("/api/files/", "/aimdev/api/files/public/");
-    return `${backend}${final}`;
-  }
+    if (url.startsWith("/api/files/")) {
+      const final = url.replace("/api/files/", "/aimdev/api/files/public/");
+      return `${backend}${final}`;
+    }
 
-  // Already correct
-  if (url.startsWith("http")) return url;
+    if (url.startsWith("http")) return url;
 
-  return `${backend}${url}`;
-};
-
+    return `${backend}${url}`;
+  };
 
   const fetchCart = async () => {
     setLoading(true);
@@ -65,6 +62,8 @@ export default function CartPage() {
     }
 
     const arr = normalizeCart(res);
+
+    // Keep inactive logic -> backend sends available=false if seller deactivated
     setCartItems(arr);
     setLoading(false);
   };
@@ -74,6 +73,7 @@ export default function CartPage() {
   }, []);
 
   const markUpdating = (id) => setUpdatingIds((prev) => new Set(prev).add(id));
+
   const unmarkUpdating = (id) =>
     setUpdatingIds((prev) => {
       const c = new Set(prev);
@@ -85,13 +85,17 @@ export default function CartPage() {
     if (newQty < 1) return;
 
     const prev = cartItems.map((it) => ({ ...it }));
+
+    const item = prev.find((it) => it.id === cartId);
+    if (item?.available === false) {
+      return toast.error("Product is no longer available.");
+    }
+
     markUpdating(cartId);
 
     setCartItems((prev) =>
       prev.map((it) =>
-        (it.id ?? it.cartId ?? it.productId) === cartId
-          ? { ...it, quantity: newQty }
-          : it
+        (it.id ?? it.cartId) === cartId ? { ...it, quantity: newQty } : it
       )
     );
 
@@ -105,39 +109,26 @@ export default function CartPage() {
     }
   };
 
-  const removeItem = async (cartId) => {
-    const el = document.getElementById(`cart-item-${cartId}`);
-    if (!el) return;
+  const removeItem = async (cartId, silent = false) => {
+    const prev = cartItems.map((it) => ({ ...it }));
+    markUpdating(cartId);
 
-    el.style.transition = "all 0.30s ease";
-    el.style.opacity = "0";
-    el.style.transform = "translateX(-20px)";
-    el.style.height = el.offsetHeight + "px";
+    setCartItems((prev) =>
+      prev.filter((it) => (it.id ?? it.cartId) !== cartId)
+    );
 
-    setTimeout(() => {
-      el.style.height = "0px";
-      el.style.padding = "0px";
-      el.style.margin = "0px";
-    }, 100);
+    try {
+      await API.delete(`/aimdev/api/cart/remove?cartId=${cartId}`);
 
-    setTimeout(async () => {
-      const prev = cartItems.map((it) => ({ ...it }));
-      markUpdating(cartId);
-
-      setCartItems((prev) =>
-        prev.filter((it) => (it.id ?? it.cartId ?? it.productId) !== cartId)
-      );
-
-      try {
-        await API.delete(`/aimdev/api/cart/remove?cartId=${cartId}`);
+      if (!silent) {
         toast.success("Item removed");
-      } catch (err) {
-        toast.error("Could not remove. Reverting.");
-        setCartItems(prev);
-      } finally {
-        unmarkUpdating(cartId);
       }
-    }, 280);
+    } catch (err) {
+      toast.error("Could not remove. Reverting.");
+      setCartItems(prev);
+    } finally {
+      unmarkUpdating(cartId);
+    }
   };
 
   const subtotal = cartItems.reduce(
@@ -148,127 +139,225 @@ export default function CartPage() {
   const shipping = subtotal > 1000 ? 0 : 49;
   const total = subtotal + shipping;
 
+  const hasUnavailableItems = cartItems.some((it) => it.available === false);
+
   if (loading) return <div className="p-8 text-center">Loading cart...</div>;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">My Cart</h1>
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">My Cart</h1>
 
-      {cartItems.length === 0 ? (
-        <div className="text-center py-12">
-          <p>Your cart is empty.</p>
-          <Link href="/products">
-            <Button className="mt-4 bg-primary">Browse Products</Button>
-          </Link>
-        </div>
-      ) : (
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* LEFT */}
-          <div className="flex-1 space-y-4">
-            {cartItems.map((it) => {
-              const id = it.id ?? it.cartId ?? it.productId;
-              const qty = Number(it.quantity ?? 1);
+        {cartItems.length === 0 ? (
+          <div className="text-center py-12">
+            <p>Your cart is empty.</p>
+            <Link href="/products">
+              <Button className="mt-4 bg-primary">Browse Products</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* LEFT SECTION */}
+            <div className="flex-1 space-y-4">
+              {cartItems.map((it) => {
+                const cartId = it.id;
+                const qty = Number(it.quantity ?? 1);
+                const title = it.pname || "Product";
+                const img = getImageUrl(it);
+                const isUpdating = updatingIds.has(cartId);
 
-              // ⭐ FIX FOR NAME
-              const title =
-                it.pname ||
-                it.name ||
-                it.productName ||
-                it.title ||
-                "Product";
-
-              const img = getImageUrl(it);
-              const isUpdating = updatingIds.has(id);
-
-              return (
-                <div
-                  key={id}
-                  id={`cart-item-${id}`}
-                  className="flex items-center gap-4 border rounded p-4 bg-white transition-all duration-300"
-                >
-                  <div className="w-28 h-28 bg-white rounded overflow-hidden flex items-center justify-center">
+                return (
+                  <div
+                    key={cartId}
+                    className={`flex items-center gap-4 border rounded p-4 shadow-sm transition-all 
+                      ${
+                        it.available === false
+                          ? "bg-gray-100 opacity-70"
+                          : "bg-white hover:shadow-md"
+                      }`}
+                  >
                     <img
                       src={img}
                       alt={title}
-                      className="object-contain p-2 w-full h-full"
+                      className="object-contain w-28 h-28 rounded bg-white p-2"
                     />
-                  </div>
 
-                  <div className="flex-1">
-                    <div className="font-medium text-lg">{title}</div>
+                    <div className="flex-1">
+                      <div className="font-medium text-lg">{title}</div>
 
-                    <div className="flex items-center gap-3 mt-3">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        disabled={qty <= 1 || isUpdating}
-                        onClick={() => updateQuantity(id, qty - 1)}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
+                      {/* Warning if product is inactive */}
+                      {it.available === false && (
+                        <div className="text-red-600 text-sm font-semibold mt-1">
+                          ⚠ This product is no longer available
+                        </div>
+                      )}
 
-                      <div className="w-8 text-center">{qty}</div>
+                      <div className="flex items-center gap-3 mt-3">
+                        {/* Disable minus */}
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          disabled={qty <= 1 || isUpdating || it.available === false}
+                          onClick={() => updateQuantity(cartId, qty - 1)}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
 
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        disabled={isUpdating}
-                        onClick={() => updateQuantity(id, qty + 1)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                        <div className="w-8 text-center">{qty}</div>
 
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        disabled={isUpdating}
-                        onClick={() => removeItem(id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        {/* Disable plus */}
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          disabled={isUpdating || it.available === false}
+                          onClick={() => updateQuantity(cartId, qty + 1)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+
+                        {/* Remove */}
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          disabled={isUpdating}
+                          onClick={() => setPopupItem({ cartId, item: it })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="text-right font-bold text-primary">
+                      ₹{(Number(it.price || 0) * qty).toLocaleString()}
                     </div>
                   </div>
-
-                  <div className="text-right font-bold text-primary">
-                    ₹{(Number(it.price || 0) * qty).toLocaleString()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* RIGHT SUMMARY */}
-          <div className="w-full md:w-1/3 bg-white border rounded p-6 shadow-sm h-fit">
-            <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>₹{subtotal.toLocaleString()}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>{shipping === 0 ? "Free" : `₹${shipping}`}</span>
-              </div>
-
-              <hr />
-
-              <div className="flex justify-between font-semibold text-lg">
-                <span>Total</span>
-                <span className="text-primary">₹{total.toLocaleString()}</span>
-              </div>
+                );
+              })}
             </div>
 
-            <Link href="/checkout" className="block">
-              <Button className="w-full mt-6 bg-primary text-white">
+            {/* RIGHT SUMMARY */}
+            <div className="w-full md:w-1/3 bg-white border rounded p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₹{subtotal.toLocaleString()}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>{shipping === 0 ? "Free" : `₹${shipping}`}</span>
+                </div>
+
+                <hr />
+
+                <div className="flex justify-between text-lg font-semibold">
+                  <span>Total</span>
+                  <span className="text-primary">
+                    ₹{total.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Updated Checkout Button Logic */}
+              <Button
+                className="w-full mt-6 bg-primary text-white"
+                disabled={hasUnavailableItems}
+                onClick={() => {
+                  if (hasUnavailableItems) {
+                    toast.error(
+                      "Some items are no longer available. Remove them before checkout."
+                    );
+                    return;
+                  }
+                  window.location.href = "/checkout";
+                }}
+              >
                 <CreditCard className="h-4 w-4 mr-2" />
                 Proceed to Checkout
               </Button>
-            </Link>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* POPUP UI */}
+      {popupItem && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-[550px] flex gap-5 animate-scaleIn">
+            <div className="w-40 h-40 rounded-lg overflow-hidden border">
+              <img
+                src={getImageUrl(popupItem.item)}
+                alt=""
+                className="object-contain w-full h-full p-2"
+              />
+            </div>
+
+            <div className="flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xl font-bold">Remove Item?</h3>
+                <p className="text-gray-600 mt-2 text-sm">
+                  Would you like to move this item to your wishlist or remove it
+                  permanently?
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-4">
+                <Button
+                  className="bg-pink-600 hover:bg-pink-700 text-white"
+                  onClick={async () => {
+                    const productId = popupItem.item.productId;
+
+                    try {
+                      await API.post(`/aimdev/api/wishlist/${productId}`);
+                      toast.success("Moved to wishlist ❤️");
+
+                      removeItem(popupItem.cartId, true);
+                    } catch (err) {
+                      toast.error("Failed to move to wishlist");
+                    } finally {
+                      setPopupItem(null);
+                    }
+                  }}
+                >
+                  <Heart className="h-4 w-4 mr-2" /> Move to Wishlist
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    removeItem(popupItem.cartId);
+                    setPopupItem(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Remove from Cart
+                </Button>
+
+                <Button variant="outline" onClick={() => setPopupItem(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
-    </div>
+
+      <style jsx>{`
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-scaleIn {
+          animation: scaleIn 0.25s ease-out forwards;
+        }
+      `}</style>
+    </>
   );
 }

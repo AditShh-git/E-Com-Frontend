@@ -1,12 +1,13 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { useUserStore } from "@/store/user-store";
+import { useSellerStore } from "@/store/seller-store";
 
 export default function SellerLayout({ children }) {
-  const { role, isLoggedIn } = useUserStore();
+  const { isLoggedIn, seller } = useSellerStore();
 
-  if (!isLoggedIn || role?.toUpperCase() !== "SELLER") {
+  // If seller NOT logged in → block
+  if (!isLoggedIn || !seller) {
     return (
       <Card className="bg-gray-200 text-center p-4">
         <p>Not authorized</p>

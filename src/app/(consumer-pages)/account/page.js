@@ -20,6 +20,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -57,17 +58,16 @@ export default function AccountPage() {
       });
 
       const payload =
-        res.data?.data?.user || res.data?.data || res.data;
+        res.data?.data?.user ||
+        res.data?.data ||
+        res.data;
 
       setAccountDetails(payload);
 
     } catch (error) {
-      console.log("fetch error", error);
+      console.log("Account fetch failed:", error);
 
-      if (
-        error?.response?.status === 401 ||
-        error?.response?.status === 403
-      ) {
+      if ([401, 403].includes(error?.response?.status)) {
         logout();
         toast.info("Session expired. Please sign in again.");
         window.location.href = "/signin";
@@ -82,13 +82,17 @@ export default function AccountPage() {
   const onProfileUpdated = () => fetchAccountDetails();
 
   // ==================================================
-  // Build Profile Image URL
+  // Build Profile Image URL (fixed)
   // ==================================================
-  const profileImg = accountDetails?.imageUrl
-    ? `${BASE_URL}/aimdev${accountDetails.imageUrl}?token=${token}`
-    : "/placeholder.svg";
+  let profileImg = "/placeholder.svg";
 
-  console.log("PROFILE IMG:", profileImg);
+  if (accountDetails?.imageUrl) {
+    let path = accountDetails.imageUrl;
+    if (!path.startsWith("/aimdev")) {
+      path = "/aimdev" + path;
+    }
+    profileImg = `${BASE_URL}${path}?token=${token}`;
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -97,13 +101,8 @@ export default function AccountPage() {
         {/* SIDEBAR */}
         <div className="md:w-64 flex-shrink-0">
           <div className="flex items-center gap-4 mb-6">
-
             <Avatar className="h-16 w-16">
-              <AvatarImage
-                src={profileImg}
-                alt="Profile"
-                className="object-cover"
-              />
+              <AvatarImage src={profileImg} alt="Profile" className="object-cover" />
               <AvatarFallback>
                 {accountDetails?.fullName?.slice(0, 2)?.toUpperCase() || "AC"}
               </AvatarFallback>
@@ -119,31 +118,65 @@ export default function AccountPage() {
             </div>
           </div>
 
-          {/* MENU */}
+          {/* SIDEBAR MENU */}
           <nav className="space-y-1">
-            {[
-              { id: "profile", icon: User, label: "Profile" },
-              { id: "orders", icon: Package, label: "Orders" },
-              { id: "addresses", icon: MapPin, label: "Addresses" },
-              { id: "payment", icon: CreditCard, label: "Payment Methods" },
-              { id: "notifications", icon: Bell, label: "Notifications" },
-              { id: "settings", icon: Settings, label: "Settings" },
-            ].map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                className={`w-full justify-start ${
-                  activeTab === item.id ? "bg-primary/10 text-primary" : ""
-                }`}
-                onClick={() => setActiveTab(item.id)}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.label}
-              </Button>
-            ))}
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === "profile" ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setActiveTab("profile")}
+            >
+              <User className="h-5 w-5 mr-3" />
+              Profile
+            </Button>
+
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === "orders" ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setActiveTab("orders")}
+            >
+              <Package className="h-5 w-5 mr-3" />
+              Orders
+            </Button>
+
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === "addresses" ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setActiveTab("addresses")}
+            >
+              <MapPin className="h-5 w-5 mr-3" />
+              Addresses
+            </Button>
+
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === "payment" ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setActiveTab("payment")}
+            >
+              <CreditCard className="h-5 w-5 mr-3" />
+              Payment Methods
+            </Button>
+
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === "notifications" ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setActiveTab("notifications")}
+            >
+              <Bell className="h-5 w-5 mr-3" />
+              Notifications
+            </Button>
+
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === "settings" ? "bg-primary/10 text-primary" : ""}`}
+              onClick={() => setActiveTab("settings")}
+            >
+              <Settings className="h-5 w-5 mr-3" />
+              Settings
+            </Button>
 
             <Separator className="my-4" />
 
+            {/* LOGOUT */}
             <Button
               onClick={() => {
                 logout();
@@ -167,7 +200,7 @@ export default function AccountPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Personal Information</CardTitle>
-                  <CardDescription>Update profile details</CardDescription>
+                  <CardDescription>Update your details</CardDescription>
                 </CardHeader>
 
                 <CardContent>
@@ -184,7 +217,7 @@ export default function AccountPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Danger Zone</CardTitle>
-                  <CardDescription>Delete your account permanently</CardDescription>
+                  <CardDescription>Permanently delete your account</CardDescription>
                 </CardHeader>
 
                 <CardContent>
@@ -196,6 +229,7 @@ export default function AccountPage() {
         </div>
       </div>
 
+      {/* EMAIL VERIFICATION POPUP */}
       <EmailVerifyPopup
         open={showVerifyPopup}
         onClose={() => setShowVerifyPopup(false)}

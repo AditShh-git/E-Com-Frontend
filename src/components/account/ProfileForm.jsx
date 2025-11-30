@@ -33,54 +33,53 @@ export default function ProfileForm({
   const [pwdLoading, setPwdLoading] = useState(false);
 
   // ------------------------------------------------------------
-  // LOAD USER PROFILE + FIX PRIVATE IMAGE URL WITH TOKEN
+  // LOAD USER + GENERATE PRIVATE IMAGE URL WITH TOKEN
   // ------------------------------------------------------------
   useEffect(() => {
-    if (accountDetails) {
-      setForm({
-        fullName: accountDetails.fullName || "",
-        email: accountDetails.email || "",
-        phone: accountDetails.phoneNo || "",
-      });
+    console.log("PROFILE TOKEN:", token);
+    if (!accountDetails) return;
 
-      // PRIVATE IMAGE FIX (correct token usage)
-      if (accountDetails.imageUrl) {
-        const finalUrl = `${BASE_URL}${accountDetails.imageUrl}?token=${token}`;
-        setImagePreview(finalUrl);
-        console.log("PROFILE FORM IMG:", finalUrl);
+    setForm({
+      fullName: accountDetails.fullName || "",
+      email: accountDetails.email || "",
+      phone: accountDetails.phoneNo || "",
+    });
+
+    if (accountDetails.imageUrl) {
+      let path = accountDetails.imageUrl;
+
+      if (!path.startsWith("/aimdev")) {
+        path = "/aimdev" + path;
       }
+
+      const finalUrl = `${BASE_URL}${path}?token=${token}`;
+      setImagePreview(finalUrl);
+      setRemoveImage(false);
     }
   }, [accountDetails, token]);
 
+  // ------------------------------------------------------------
+  // INPUT HANDLER
+  // ------------------------------------------------------------
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   // ------------------------------------------------------------
-  // HANDLE IMAGE SELECTION
+  // SELECT NEW IMAGE
   // ------------------------------------------------------------
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImageFile(file);
     setRemoveImage(false);
-
+    setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
 
   // ------------------------------------------------------------
-  // REMOVE PROFILE IMAGE
-  // ------------------------------------------------------------
-  const handleRemoveImage = () => {
-    setRemoveImage(true);
-    setImageFile(null);
-    setImagePreview(null);
-  };
-
-  // ------------------------------------------------------------
-  // SAVE PROFILE (MAIN FIX HERE)
+  // SAVE PROFILE
   // ------------------------------------------------------------
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -96,7 +95,7 @@ export default function ProfileForm({
         fd.append("image", imageFile);
       }
 
-      // IMPORTANT FIX: send remove flag
+      // Important: remove flag
       fd.append("removeImage", removeImage ? "true" : "false");
 
       const url =
@@ -117,21 +116,19 @@ export default function ProfileForm({
         res.data?.description ||
         "";
 
-      // Email verification
       if (msg.toLowerCase().includes("verification email")) {
         toast.success("Verification email sent!");
-        onEmailVerificationRequired && onEmailVerificationRequired();
+        onEmailVerificationRequired?.();
         return;
       }
 
       if (res.data?.status === "SUCCESS") {
         toast.success("Profile updated successfully!");
-        onUpdated && onUpdated();
+        onUpdated?.();
       } else {
-        toast.error(msg || "Failed to update profile");
+        toast.error(msg || "Update failed");
       }
     } catch (err) {
-      console.log(err);
       toast.error(err.response?.data?.message || "Server error");
     } finally {
       setIsSaving(false);
@@ -139,18 +136,19 @@ export default function ProfileForm({
   };
 
   // ------------------------------------------------------------
-  // CHANGE PASSWORD
+  // UPDATE PASSWORD
   // ------------------------------------------------------------
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setPwdLoading(true);
 
-    try {
-      if (newPassword !== confirmPassword) {
-        toast.error("Passwords do not match");
-        return;
-      }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      setPwdLoading(false);
+      return;
+    }
 
+    try {
       const fd = new FormData();
       fd.append("oldPassword", oldPassword);
       fd.append("newPassword", newPassword);
@@ -168,8 +166,8 @@ export default function ProfileForm({
         },
       });
 
-      if (res.data?.status === "SUCCESS") {
-        toast.success("Password updated successfully!");
+      if (res.data.status === "SUCCESS") {
+        toast.success("Password updated!");
         setOldPassword("");
         setNewPassword("");
         setConfirmPassword("");
@@ -183,11 +181,15 @@ export default function ProfileForm({
     }
   };
 
+  // ------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------
   return (
     <div className="space-y-6">
       {/* PROFILE FORM */}
       <form onSubmit={handleSaveProfile} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* NAME */}
           <div>
             <Label>Full Name</Label>
             <Input
@@ -198,6 +200,7 @@ export default function ProfileForm({
             />
           </div>
 
+          {/* EMAIL */}
           <div>
             <Label>Email</Label>
             <Input
@@ -209,6 +212,7 @@ export default function ProfileForm({
             />
           </div>
 
+          {/* PHONE */}
           <div>
             <Label>Phone</Label>
             <Input
@@ -219,7 +223,7 @@ export default function ProfileForm({
             />
           </div>
 
-          {/* IMAGE UPLOAD WITH PRIVATE URL FIX */}
+          {/* PROFILE IMAGE */}
           <div>
             <Label>Profile Image</Label>
 
@@ -230,14 +234,42 @@ export default function ProfileForm({
                   className="h-28 w-28 rounded-full object-cover border"
                 />
 
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleRemoveImage}
-                >
-                  Remove Image
-                </Button>
+                <div className="flex gap-3">
+                  {/* CHANGE IMAGE */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      document.getElementById("imageUploadInput").click()
+                    }
+                  >
+                    Change Image
+                  </Button>
+
+                  {/* DELETE IMAGE */}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setRemoveImage(true);
+                      setImagePreview(null);
+                      setImageFile(null);
+                    }}
+                  >
+                    Delete Image
+                  </Button>
+                </div>
+
+                {/* HIDDEN FILE INPUT */}
+                <input
+                  id="imageUploadInput"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
               </div>
             ) : (
               <input

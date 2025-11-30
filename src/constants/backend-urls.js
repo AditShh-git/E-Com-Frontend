@@ -3,11 +3,23 @@ console.log("BASE_URL =", process.env.NEXT_PUBLIC_BACKEND_URL);
 export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 /* ============================================================
-   AUTH
+   AUTH (FINAL FIXED PATHS)
 ============================================================ */
+
+// USER login + signup
 export const consumer_signup_url = `${BASE_URL}/aimdev/api/user/signup`;
-export const consumer_login_url = `${BASE_URL}/aimdev/api/auth/signin`;
-export const logout_url = `${BASE_URL}/aimdev/api/logout`;
+export const consumer_login_url = `${BASE_URL}/aimdev/api/auth/user/signin`;
+
+// SELLER login + signup
+export const seller_signup_url = `${BASE_URL}/aimdev/api/seller/signup`;
+export const seller_login_url = `${BASE_URL}/aimdev/api/auth/seller/signin`;
+
+// ADMIN login + signup
+export const admin_login_url = `${BASE_URL}/aimdev/api/auth/admin/signin`;
+export const admin_signup_url = `${BASE_URL}/aimdev/api/auth/signup/admin`;
+
+// COMMON AUTH ROUTES
+export const logout_url = `${BASE_URL}/aimdev/api/auth/logout`;
 export const verify_email_url = `${BASE_URL}/aimdev/api/auth/verify-email`;
 export const forgot_password_url = `${BASE_URL}/aimdev/api/auth/forgot-password`;
 export const reset_password_url = `${BASE_URL}/aimdev/api/auth/reset-password`;
@@ -18,21 +30,12 @@ export const reset_password_url = `${BASE_URL}/aimdev/api/auth/reset-password`;
 export const user_me_url = `${BASE_URL}/aimdev/api/user/me`;
 export const update_profile_url = `${BASE_URL}/aimdev/api/user/profile/update`;
 export const delete_account_url = `${BASE_URL}/aimdev/api/user/delete/me`;
-// export const consumer_products_url = `${BASE_URL}/aimdev/api/products`;
+
 export const consumer_product_list_url = `${BASE_URL}/aimdev/api/public/product/list`;
 export const consumer_cart_my_url = `${BASE_URL}/aimdev/api/cart/my`;
 
-
-
 /* ============================================================
-   SELLER AUTH
-============================================================ */
-export const seller_signup_url = `${BASE_URL}/aimdev/api/seller/signup`;
-export const seller_login_url = `${BASE_URL}/aimdev/api/auth/signin`;
-export const find_seller_url = `${BASE_URL}/aimdev/api/find/seller`;
-
-/* ============================================================
-   SELLER PRODUCT API (UPDATED)
+   SELLER PRODUCT APIs
 ============================================================ */
 export const seller_product_list_url = `${BASE_URL}/aimdev/api/seller/product/list`;
 export const seller_add_product_url = `${BASE_URL}/aimdev/api/seller/product/add`;
@@ -45,10 +48,10 @@ export const seller_upload_image_url = (id) =>
   `${BASE_URL}/aimdev/api/seller/product/${id}/images`;
 
 export const seller_delete_single_image_url = (productId, imageId) =>
-  `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api/seller/product/${productId}/images/${imageId}`;
+  `${BASE_URL}/aimdev/api/seller/product/${productId}/images/${imageId}`;
 
-/* FRONTEND PUBLIC IMAGE VIEW */
-export const PUBLIC_FILE_URL = `${BASE_URL}/api/files/public`;
+/* PUBLIC FILE VIEW */
+export const PUBLIC_FILE_URL = `${BASE_URL}/aimdev/api/files/public`;
 
 /* ============================================================
    SELLER ANALYTICS
@@ -59,57 +62,13 @@ export const seller_sales_trend_url = `${BASE_URL}/aimdev/api/seller/analytics/c
 export const seller_top_products_url = `${BASE_URL}/aimdev/api/seller/analytics/reports/products`;
 
 /* ============================================================
-   VENDOR
-============================================================ */
-export const vendor_signup_url = `${BASE_URL}/aimdev/api/auth/signup/vendor`;
-export const find_vendor_url = `${BASE_URL}/aimdev/api/find/vendor`;
-
-/* ============================================================
-   ADMIN
-============================================================ */
-export const admin_signup_url = `${BASE_URL}/aimdev/api/auth/signup/admin`;
-export const find_admin_url = `${BASE_URL}/aimdev/api/find/admin`;
-export const getallseller = `${BASE_URL}/aimdev/api/sellers`;
-export const getalluserOrder = `${BASE_URL}/aimdev/api/orders/all/users`;
-
-/* ============================================================
-   DELIVERY PERSON
-============================================================ */
-export const delivery_signup_url = `${BASE_URL}/aimdev/api/contacts/auth/signup/delivery`;
-export const get_delivery_by_id_url = (id) =>
-  `${BASE_URL}/aimdev/api/contacts/deliveryPerson/${id}`;
-export const get_all_delivery_url = `${BASE_URL}/aimdev/api/contacts/deliveryPerson/all`;
-
-/* ============================================================
    WISHLIST
 ============================================================ */
-export const wishlist_save_url = (cartId) =>
-  `${BASE_URL}/aimdev/api/wishlist/save/${cartId}`;
+export const wishlist_save_url = (productId) =>
+  `${BASE_URL}/aimdev/api/wishlist/${productId}`;
 export const wishlist_get_url = `${BASE_URL}/aimdev/api/wishlist`;
-export const wishlist_delete_url = (wishlistId) =>
-  `${BASE_URL}/aimdev/api/wishlist/${wishlistId}`;
-
-/* ============================================================
-   PAYMENT
-============================================================ */
-export const payment_url = `${BASE_URL}/aimdev/api/payment`;
-export const create_payment_url = `${BASE_URL}/aimdev/api/auth/createPayment`;
-export const get_payment_status_url = `${BASE_URL}/aimdev/api/auth/getPaymentStatus`;
-
-/* ============================================================
-   ORDERS
-============================================================ */
-export const order_save_url = `${BASE_URL}/aimdev/api/order/save`;
-export const order_list_url = `${BASE_URL}/aimdev/api/orders`;
-export const user_order_list_url = `${BASE_URL}/aimdev/api/orders/user`;
-export const order_status_update_url = `${BASE_URL}/aimdev/api/orders/status/update`;
-export const order_detail_url = (id) =>
-  `${BASE_URL}/aimdev/api/order/${id}`;
-
-/* ============================================================
-   CONTACT
-============================================================ */
-export const contact_save_url = `${BASE_URL}/aimdev/api/contacts/save`;
+export const wishlist_delete_url = (productId) =>
+  `${BASE_URL}/aimdev/api/wishlist/${productId}`;
 
 /* ============================================================
    CART
@@ -124,6 +83,23 @@ export const carts_by_category_url = (category) =>
 export const delete_cart_by_id = (id) =>
   `${BASE_URL}/aimdev/api/delete/cart/${id}`;
 export const get_carts_admin_url = `${BASE_URL}/aimdev/api/admin/carts`;
+
+/* ============================================================
+   ORDERS
+============================================================ */
+export const order_save_url = `${BASE_URL}/aimdev/api/order/save`;
+export const order_list_url = `${BASE_URL}/aimdev/api/orders`;
+export const user_order_list_url = `${BASE_URL}/aimdev/api/orders/user`;
+export const order_status_update_url = `${BASE_URL}/aimdev/api/orders/status/update`;
+export const order_detail_url = (id) =>
+  `${BASE_URL}/aimdev/api/order/${id}`;
+
+/* ============================================================
+   PAYMENT
+============================================================ */
+export const payment_url = `${BASE_URL}/aimdev/api/payment`;
+export const create_payment_url = `${BASE_URL}/aimdev/api/auth/createPayment`;
+export const get_payment_status_url = `${BASE_URL}/aimdev/api/auth/getPaymentStatus`;
 
 /* ============================================================
    FILE

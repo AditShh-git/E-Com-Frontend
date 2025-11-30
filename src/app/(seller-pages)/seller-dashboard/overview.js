@@ -31,10 +31,14 @@ export default function Overview() {
     async function load() {
       const res = await getSellerOverview();
 
-      if (res?.status === "SUCCESS") {
-        setOverview(res.data.data);
-      }
+      // ⭐ FIXED → REAL DATA INSIDE res.data.data.data
+      const payload =
+        res?.data?.data?.data ||
+        res?.data?.data ||
+        res?.data ||
+        null;
 
+      setOverview(payload);
       setLoading(false);
     }
 
@@ -44,6 +48,7 @@ export default function Overview() {
   if (loading) return <p className="p-4">Loading overview…</p>;
   if (!overview) return <p className="p-4">Failed to load seller overview.</p>;
 
+  // ⭐ SAFE FALLBACKS
   const stats = overview.stats || {};
   const recent = overview.recentOrders || [];
   const topProducts = overview.topProducts || [];
@@ -51,7 +56,9 @@ export default function Overview() {
   return (
     <TabsContent value="overview" className="space-y-6">
 
-      {/* STAT CARDS */}
+      {/* ======================= */}
+      {/*       STAT CARDS        */}
+      {/* ======================= */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
         <Card>
@@ -60,7 +67,7 @@ export default function Overview() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{stats.totalRevenue}</div>
+            <div className="text-2xl font-bold">₹{stats.totalRevenue ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -70,7 +77,7 @@ export default function Overview() {
             <ShoppingBag className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <div className="text-2xl font-bold">{stats.totalOrders ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -80,7 +87,7 @@ export default function Overview() {
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
+            <div className="text-2xl font-bold">{stats.totalProducts ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -90,13 +97,17 @@ export default function Overview() {
             <Star className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageRating}/5</div>
+            <div className="text-2xl font-bold">
+              {stats.averageRating ?? 0}/5
+            </div>
           </CardContent>
         </Card>
 
       </div>
 
-      {/* RECENT ORDERS */}
+      {/* ======================= */}
+      {/*     RECENT ORDERS       */}
+      {/* ======================= */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Orders</CardTitle>
@@ -126,8 +137,8 @@ export default function Overview() {
                 <TableRow key={o.orderId}>
                   <TableCell>{o.orderId}</TableCell>
                   <TableCell>{o.customerName}</TableCell>
-                  <TableCell>{o.orderStatus}</TableCell>
-                  <TableCell className="text-right">₹{o.amount}</TableCell>
+                  <TableCell>{o.status}</TableCell>
+                  <TableCell className="text-right">₹{o.total}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -136,7 +147,9 @@ export default function Overview() {
         </CardContent>
       </Card>
 
-      {/* TOP PRODUCTS */}
+      {/* ======================= */}
+      {/*      TOP PRODUCTS       */}
+      {/* ======================= */}
       <Card>
         <CardHeader>
           <CardTitle>Top Selling Products</CardTitle>

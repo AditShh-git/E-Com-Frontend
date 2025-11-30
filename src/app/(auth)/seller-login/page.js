@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -13,15 +14,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import { toast } from "sonner";
 import axios from "axios";
+
 import { seller_login_url } from "@/constants/backend-urls";
-import { useUserStore } from "@/store/user-store";
+
+// IMPORTANT: Correct store import
+import { useSellerStore } from "@/store/seller-store";
 
 export default function SellerSignIn() {
-  const { login } = useUserStore();
+  const { login } = useSellerStore();  // NOW FIXED
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -29,137 +35,67 @@ export default function SellerSignIn() {
   const [formData, setFormData] = useState({ email: "", password: "" });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((p) => ({ ...p, [name]: value }));
-  };
-
-  const tryVariant = async (variant) => {
-    try {
-      const res = await axios.post(seller_login_url, variant.body, {
-        headers: variant.headers,
-      });
-      console.log(`[login] variant '${variant.desc}' response:`, res?.data ?? res);
-      return res;
-    } catch (err) {
-      console.error(`[login] variant '${variant.desc}' error:`, err?.response ?? err);
-      throw err;
-    }
+    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const variants = [
-      {
-        desc: "JSON {username, password}",
-        headers: { "Content-Type": "application/json" },
-        body: { username: formData.email, password: formData.password },
-      },
-      {
-        desc: "JSON {email, password}",
-        headers: { "Content-Type": "application/json" },
-        body: { email: formData.email, password: formData.password },
-      },
-      {
-        desc: "form-urlencoded username",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username: formData.email, password: formData.password }).toString(),
-      },
-      {
-        desc: "form-urlencoded email",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ email: formData.email, password: formData.password }).toString(),
-      },
-    ];
+    try {
+      const res = await axios.post(seller_login_url, formData);
 
-    let lastError = null;
+      if (res.data.status === "SUCCESS") {
+        const data = res.data.data;
 
-    for (const v of variants) {
-      try {
-        console.log("[login] trying variant:", v.desc, { url: seller_login_url });
-        const res = await tryVariant(v);
+        const seller = {
+          id: data.empId,
+          fullName: data.fullname,
+          email: data.email,
+          sellerId: data.sellerId,
+        };
 
-        // Normalize response
-        const envelopeStatus = res?.data?.status ?? null;
-        const innerData = res?.data?.data ?? res?.data ?? null;
-        const httpOk = res?.status === 200 || res?.status === 201;
+        const token = data.accessToken;
 
-        if (envelopeStatus === "SUCCESS" || httpOk) {
-          const token =
-            innerData?.accessToken ||
-            innerData?.token ||
-            res?.data?.accessToken ||
-            null;
+        // Save token in correct store that dashboard can read
+        login(seller, token);
 
-          const storageObj = { state: { user: { accessToken: token, ...innerData } } };
-          try {
-            localStorage.setItem("user-storage", JSON.stringify(storageObj));
-          } catch (err) {
-            console.warn("[login] failed to persist token", err);
-          }
+        toast.success("Seller login successful");
 
-          try {
-            login(innerData, token, "seller");
-          } catch (err) {
-            console.warn("[login] store login failed", err);
-          }
-
-          toast.success("Logged in successfully.");
-          router.push("/seller-dashboard");
-          setIsLoading(false);
-          return;
-        } else {
-          console.warn("[login] non-success response for variant", v.desc, res.data);
-          lastError = res.data;
-        }
-      } catch (err) {
-        lastError = err;
-        // continue to next variant
+        router.push("/seller-dashboard");
+      } else {
+        toast.error(res.data.message || "Invalid seller credentials");
       }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Seller login failed");
+    } finally {
+      setIsLoading(false);
     }
-
-    console.warn("[login] all variants failed:", lastError);
-    const backendError =
-      lastError?.response?.data?.error?.errors?.[0]?.message ||
-      lastError?.response?.data?.error?.message ||
-      lastError?.response?.data?.message ||
-      lastError?.message ||
-      "Invalid credentials or server rejected request";
-
-    toast.error(backendError);
-
-    // hint for developer in console if network/CORS
-    if (!lastError?.response) {
-      console.warn("[login] No response object — possible CORS or network issue.");
-    }
-
-    setIsLoading(false);
   };
 
   return (
-    <div className="flex min-h-[86vh] items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-primary">
-            Sign In as a Seller
-          </CardTitle>
+    <div className="flex min-h-[85vh] items-center justify-center p-4">
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <CardTitle className="text-center text-xl">Seller Login</CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to sign in to your seller account
+            Access your seller dashboard
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+
+            {/* Email */}
+            <div>
+              <Label>Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+
                 <Input
-                  id="email"
                   name="email"
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="seller@example.com"
                   className="pl-10"
                   value={formData.email}
                   onChange={handleChange}
@@ -168,18 +104,13 @@ export default function SellerSignIn() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-
+            {/* Password */}
+            <div>
+              <Label>Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+
                 <Input
-                  id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   className="pl-10 pr-10"
@@ -187,30 +118,32 @@ export default function SellerSignIn() {
                   onChange={handleChange}
                   required
                 />
+
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-0 top-0 h-10 w-10 text-muted-foreground"
-                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-0 top-0 h-10 w-10"
+                  onClick={() => setShowPassword((v) => !v)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff /> : <Eye />}
                 </Button>
               </div>
             </div>
+
           </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full mt-5" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+          <CardFooter className="flex flex-col gap-4">
+            <Button className="w-full" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
 
-            <div className="text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link href="/seller-signup" className="text-primary hover:underline">
-                Register as a Seller
+            <p className="text-center text-sm">
+              Not a seller?{" "}
+              <Link href="/seller-signup" className="text-primary underline">
+                Register as Seller
               </Link>
-            </div>
+            </p>
           </CardFooter>
         </form>
       </Card>

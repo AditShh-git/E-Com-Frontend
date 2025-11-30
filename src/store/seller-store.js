@@ -1,6 +1,3 @@
-// src/store/seller-store.js
-// Zustand seller store persisted to "seller-auth"
-
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 

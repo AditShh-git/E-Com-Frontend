@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Eye, EyeOff, Mail, Lock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { consumer_login_url } from "@/constants/backend-urls";
 import { useUserStore } from "@/store/user-store";
 
 export default function AdminLogin() {
@@ -17,41 +23,56 @@ export default function AdminLogin() {
   const login = useUserStore((state) => state.login);
 
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  // Correct backend endpoint for ADMIN
+  const ADMIN_LOGIN_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api/auth/admin/signin`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    localStorage.removeItem("user-storage"); // ❗ Clear old USER token
+    // Clear any old user/seller tokens
+    localStorage.removeItem("user-storage");
 
     try {
-      const res = await axios.post(consumer_login_url, {
-        email: formData.email,
-        password: formData.password,
-      });
+      const res = await axios.post(
+        ADMIN_LOGIN_URL,
+        {
+          email: formData.email,
+          password: formData.password,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (res.data.status !== "SUCCESS") {
-        toast.error("Invalid credentials");
+        toast.error("Invalid admin credentials");
         return;
       }
 
       const data = res.data.data;
 
       if (data.role !== "ADMIN") {
-        toast.error("Access denied! Only admins can login here.");
+        toast.error("Access denied! Only admins can login.");
         return;
       }
 
-      // Save token + user info
-      login(data, data.accessToken, data.role);
+      // Save user + token
+      login(data, data.accessToken, "ADMIN");
 
       toast.success("Admin login successful!");
       router.push("/admin/dashboard");
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
       toast.error("Invalid email or password");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -78,7 +99,12 @@ export default function AdminLogin() {
                   name="email"
                   type="email"
                   className="pl-10"
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      email: e.target.value,
+                    })
+                  }
                   required
                 />
               </div>
@@ -88,11 +114,17 @@ export default function AdminLogin() {
               <Label>Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 text-muted-foreground" size={16} />
+
                 <Input
                   name="password"
                   type={showPassword ? "text" : "password"}
                   className="pl-10 pr-10"
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      password: e.target.value,
+                    })
+                  }
                   required
                 />
 
