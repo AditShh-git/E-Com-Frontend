@@ -1,29 +1,35 @@
+"use client";
+
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
-export const useUserStore = create((set) => ({
-  isLoggedIn: false,
-  role: null,
-  user: null,
-  token: null,     // ✅ ADD THIS
-
-  login: (userData, token, role) =>
-    set(() => ({
-      isLoggedIn: true,
-      role: role,
-      token: token,    // ✅ SAVE TOKEN HERE
-      user: {
-        docId: userData.docId,
-        username: userData.fullName,
-        email: userData.email,
-        imageUrl: userData.imageUrl,
-      }
-    })),
-
-  logout: () =>
-    set(() => ({
-      isLoggedIn: false,
-      role: null,
+export const useUserStore = create(
+  persist(
+    (set) => ({
       user: null,
-      token: null,   
-    })),
-}));
+      token: null,
+      role: null,
+      isLoggedIn: false,
+
+      login: (userData, token, role) =>
+        set({
+          user: userData,
+          token: token,
+          role: role,
+          isLoggedIn: true,
+        }),
+
+      logout: () =>
+        set({
+          user: null,
+          token: null,
+          role: null,
+          isLoggedIn: false,
+        }),
+    }),
+    {
+      name: "user-storage",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);

@@ -63,7 +63,7 @@ export default function AddProductPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ⭐ Toast instead of alert
+      //  Toast instead of alert
       toast.success("Product created successfully!");
 
       setTimeout(() => {

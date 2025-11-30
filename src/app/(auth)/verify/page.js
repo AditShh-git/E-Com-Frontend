@@ -30,7 +30,7 @@ function VerifyContent() {
         console.log("VERIFY RESPONSE =", res.data);
 
         if (res.data.status === "SUCCESS") {
-          // 🔥 SAFE ROLE EXTRACTION
+          //  SAFE ROLE EXTRACTION
           const role =
             res.data.data?.role ||
             res.data.data?.data?.role ||
@@ -40,7 +40,7 @@ function VerifyContent() {
           toast.success("Email verified!");
           logout();
 
-          // 🔥 Correct redirection based on role
+          //  Correct redirection based on role
           if (role === "USER") router.replace("/signin");
           else if (role === "SELLER") router.replace("/seller-login");
           else if (role === "ADMIN") router.replace("/admin/login");

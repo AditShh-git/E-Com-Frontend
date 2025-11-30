@@ -8,7 +8,7 @@ export const useSellerStore = create(
       token: null,
       isLoggedIn: false,
 
-      // ⭐ ADD THIS — needed by your dashboard
+      
       setSeller: (sellerObj) =>
         set({
           seller: sellerObj,

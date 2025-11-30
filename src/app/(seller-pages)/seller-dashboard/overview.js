@@ -31,7 +31,7 @@ export default function Overview() {
     async function load() {
       const res = await getSellerOverview();
 
-      // ⭐ FIXED → REAL DATA INSIDE res.data.data.data
+      //  FIXED → REAL DATA INSIDE res.data.data.data
       const payload =
         res?.data?.data?.data ||
         res?.data?.data ||
