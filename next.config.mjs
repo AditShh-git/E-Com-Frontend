@@ -3,6 +3,11 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
+        protocol: "https",
+        hostname: "plumate-slippery-shayla.ngrok-free.dev",
+        pathname: "/aimdev/api/files/public/**",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "8989",
