@@ -1,16 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { reset_password_url } from "@/constants/backend-urls.js";
 
-// export const dynamic = "force-dynamic";
-// export const fetchCache = "force-no-store";
-// export const revalidate = 0;
-
-function ResetPasswordClient() {
+export default function ResetPassword() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -27,30 +23,46 @@ function ResetPasswordClient() {
   }, [token, router]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const res = await axios.post(
-        reset_password_url,
-        { token, newPassword: password },
-        { headers: { "Content-Type": "application/json" } }
-      );
+  try {
+    const res = await axios.post(
+      reset_password_url,
+      { token, newPassword: password },
+      { headers: { "Content-Type": "application/json" } }
+    );
 
-      if (res.data.status === "SUCCESS") {
-        toast.success("Password reset successfully!");
-        setTimeout(() => router.push("/signin"), 1500);
-      } else {
-        toast.error(
-          res.data?.error?.errors?.[0]?.message || "Invalid token."
-        );
-      }
-    } catch (err) {
-      toast.error("Reset failed. Token may be expired.");
-    } finally {
-      setLoading(false);
+    console.log("RESET RESPONSE:", res.data);
+
+    if (res.data.status === "SUCCESS") {
+      
+      // Extract role safely from ANY nesting
+      const role =
+        res.data?.data?.data?.role ||
+        res.data?.data?.role ||
+        res.data?.role ||
+        null;
+
+      toast.success("Password reset successfully!");
+
+      setTimeout(() => {
+        if (role === "SELLER") router.push("/seller-login");
+        else if (role === "ADMIN") router.push("/admin/login");
+        else router.push("/signin"); // user default
+      }, 1500);
+
+    } else {
+      toast.error(res.data?.error?.errors?.[0]?.message || "Invalid token.");
     }
-  };
+
+  } catch (err) {
+    toast.error("Reset failed. Token may be expired.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="flex justify-center items-center min-h-screen">
@@ -90,13 +102,5 @@ function ResetPasswordClient() {
         </button>
       </form>
     </div>
-  );
-}
-
-export default function ResetPassword() {
-  return (
-    <Suspense fallback={<div className="text-xl">Loading...</div>}>
-      <ResetPasswordClient />
-    </Suspense>
   );
 }

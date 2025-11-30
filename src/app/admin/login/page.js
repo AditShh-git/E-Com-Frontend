@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Eye, EyeOff, Mail, Lock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardHeader,
@@ -13,10 +14,12 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useUserStore } from "@/store/user-store";
+import Link from "next/link";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -29,14 +32,14 @@ export default function AdminLogin() {
     password: "",
   });
 
-  // Correct backend endpoint for ADMIN
-  const ADMIN_LOGIN_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api/auth/admin/signin`;
+  const ADMIN_LOGIN_URL =
+    `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api/auth/admin/signin`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Clear any old user/seller tokens
+    // 🔥 Clear old user/seller tokens
     localStorage.removeItem("user-storage");
 
     try {
@@ -47,9 +50,7 @@ export default function AdminLogin() {
           password: formData.password,
         },
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
@@ -65,14 +66,14 @@ export default function AdminLogin() {
         return;
       }
 
-      // Save user + token
+      // Store admin info
       login(data, data.accessToken, "ADMIN");
 
       toast.success("Admin login successful!");
       router.push("/admin/dashboard");
+
     } catch (err) {
       toast.error("Invalid email or password");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -91,6 +92,8 @@ export default function AdminLogin() {
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+
+            {/* EMAIL */}
             <div>
               <Label>Email</Label>
               <div className="relative">
@@ -99,17 +102,13 @@ export default function AdminLogin() {
                   name="email"
                   type="email"
                   className="pl-10"
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      email: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
               </div>
             </div>
 
+            {/* PASSWORD */}
             <div>
               <Label>Password</Label>
               <div className="relative">
@@ -119,12 +118,7 @@ export default function AdminLogin() {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   className="pl-10 pr-10"
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      password: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                 />
 
@@ -139,12 +133,29 @@ export default function AdminLogin() {
                 </Button>
               </div>
             </div>
+
           </CardContent>
 
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </Button>
+
+            {/*  ADDING FORGOT PASSWORD LINK */}
+            <p className="text-center text-sm">
+              <Link href="/admin-forgot-password" className="text-primary underline">
+                Forgot Password?
+              </Link>
+            </p>
+            <p className="text-center text-sm">
+  Didn’t receive email?{" "}
+  <Link href="/resend-verification" className="text-primary underline">
+    Resend Verification
+  </Link>
+</p>
+
+
           </CardFooter>
         </form>
       </Card>

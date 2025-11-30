@@ -5,12 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { verify_email_url } from "@/constants/backend-urls";
-import { useUserStore } from "@/store/user-store";   // ✅ FIXED
+import { useUserStore } from "@/store/user-store";
 
 function VerifyContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const logout = useUserStore((s) => s.logout);       // ✅ now works
+  const logout = useUserStore((s) => s.logout);
 
   const [loading, setLoading] = useState(true);
 
@@ -27,14 +27,25 @@ function VerifyContent() {
       try {
         const res = await axios.get(verify_email_url, { params: { token } });
 
-        if (res.data.status === "SUCCESS") {
-          toast.success("Email verified!");
+        console.log("VERIFY RESPONSE =", res.data);
 
+        if (res.data.status === "SUCCESS") {
+          // 🔥 SAFE ROLE EXTRACTION
+          const role =
+            res.data.data?.role ||
+            res.data.data?.data?.role ||
+            res.data.role ||
+            null;
+
+          toast.success("Email verified!");
           logout();
 
-          setTimeout(() => {
-            router.push("/signin");
-          }, 1500);
+          // 🔥 Correct redirection based on role
+          if (role === "USER") router.replace("/signin");
+          else if (role === "SELLER") router.replace("/seller-login");
+          else if (role === "ADMIN") router.replace("/admin/login");
+          else router.replace("/signin"); // fallback
+
         } else {
           toast.error("Verification failed.");
         }

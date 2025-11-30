@@ -22,12 +22,10 @@ import { toast } from "sonner";
 import axios from "axios";
 
 import { seller_login_url } from "@/constants/backend-urls";
-
-// IMPORTANT: Correct store import
 import { useSellerStore } from "@/store/seller-store";
 
 export default function SellerSignIn() {
-  const { login } = useSellerStore();  // NOW FIXED
+  const { login } = useSellerStore();
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -55,13 +53,9 @@ export default function SellerSignIn() {
           sellerId: data.sellerId,
         };
 
-        const token = data.accessToken;
-
-        // Save token in correct store that dashboard can read
-        login(seller, token);
+        login(seller, data.accessToken);
 
         toast.success("Seller login successful");
-
         router.push("/seller-dashboard");
       } else {
         toast.error(res.data.message || "Invalid seller credentials");
@@ -85,13 +79,11 @@ export default function SellerSignIn() {
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-
             {/* Email */}
             <div>
               <Label>Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
                 <Input
                   name="email"
                   type="email"
@@ -109,7 +101,6 @@ export default function SellerSignIn() {
               <Label>Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
                 <Input
                   name="password"
                   type={showPassword ? "text" : "password"}
@@ -118,7 +109,6 @@ export default function SellerSignIn() {
                   onChange={handleChange}
                   required
                 />
-
                 <Button
                   type="button"
                   variant="ghost"
@@ -130,13 +120,28 @@ export default function SellerSignIn() {
                 </Button>
               </div>
             </div>
-
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4">
             <Button className="w-full" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Login"}
             </Button>
+
+            {/*  FORGOT PASSWORD LINK */}
+            <p className="text-center text-sm">
+              <Link href="/forgot-password" className="text-primary underline">
+  Forgot Password?
+</Link>
+
+            </p>
+
+            <p className="text-center text-sm">
+  Didn’t receive email?{" "}
+  <Link href="/resend-verification" className="text-primary underline">
+    Resend Verification
+  </Link>
+</p>
+
 
             <p className="text-center text-sm">
               Not a seller?{" "}

@@ -5,6 +5,7 @@ import axios from "axios";
 import { seller_add_product_url } from "@/constants/backend-urls";
 import { getToken } from "@/utils/sellerApi";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function AddProductPage() {
   const [categories, setCategories] = useState([]);
@@ -37,7 +38,7 @@ export default function AddProductPage() {
   };
 
   const handleSubmit = async (form) => {
-    console.log("ADD-PRODUCT HANDLE SUBMIT FIRED ✔");
+    console.log("ADD-PRODUCT HANDLE SUBMIT ✔");
 
     const token = getToken();
 
@@ -58,16 +59,20 @@ export default function AddProductPage() {
         form.newImages.forEach((file) => fd.append("images", file));
       }
 
-      const createRes = await axios.post(seller_add_product_url, fd, {
+      await axios.post(seller_add_product_url, fd, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      alert("Product created successfully!");
-      window.location.href = "/seller-dashboard?tab=products";
+      // ⭐ Toast instead of alert
+      toast.success("Product created successfully!");
+
+      setTimeout(() => {
+        window.location.href = "/seller-dashboard?tab=products";
+      }, 1000);
 
     } catch (err) {
       console.error("ADD PRODUCT ERROR:", err);
-      alert("Error creating product");
+      toast.error("Error creating product");
     }
   };
 

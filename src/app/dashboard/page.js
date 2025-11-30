@@ -1,13 +1,35 @@
-import Link from "next/link"
-import Image from "next/image"
-import { ArrowRight, ShoppingBag, Briefcase, Star, TrendingUp } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+"use client";
+
+import { useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, ShoppingBag, Briefcase, Star, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+import { useCartStore } from "@/store/cart-store";
+import { useWishlistStore } from "@/store/wishlist-store";
 
 export default function Dashboard() {
+
+  // Zustand stores
+  const { cartItems, fetchCart } = useCartStore();
+  const { wishlistItems, fetchWishlist } = useWishlistStore();
+
+  // Load cart & wishlist on mount
+  useEffect(() => {
+    fetchCart();
+    fetchWishlist();
+  }, []);
+
+  // Counts (Dynamic)
+  const cartCount = cartItems.length;
+  const wishlistCount = wishlistItems.length;
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
+
+      {/* HERO */}
       <section className="relative w-full h-[500px] flex items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-black/70 z-10" />
         <Image
@@ -18,14 +40,18 @@ export default function Dashboard() {
           priority
         />
         <div className="relative z-20 container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">Your One-Stop Marketplace</h1>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
+            Your One-Stop Marketplace
+          </h1>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Find the best products and services from verified sellers here
           </p>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
               <Link href="/products">Browse Products</Link>
             </Button>
+
             <Button
               size="lg"
               variant="outline"
@@ -34,6 +60,13 @@ export default function Dashboard() {
             >
               <Link href="#">Explore Services</Link>
             </Button>
+          </div>
+
+          {/* Dynamic wishlist & cart */}
+          <div className="mt-6 text-white text-lg">
+            ❤️ Wishlist: <span className="font-bold">{wishlistCount}</span>  
+            &nbsp;&nbsp; | &nbsp;&nbsp;  
+            🛒 Cart: <span className="font-bold">{cartCount}</span>
           </div>
         </div>
       </section>
@@ -52,7 +85,7 @@ export default function Dashboard() {
             <Link key={category.id} href={category.href}>
               <Card className="overflow-hidden transition-all hover:shadow-md border-red-100 hover:border-primary">
                 <div className="relative h-40">
-                  <Image src={category.image || "/placeholder.svg"} alt={category.name} fill className="object-cover" />
+                  <Image src={category.image} alt={category.name} fill className="object-cover" />
                 </div>
                 <CardContent className="p-4">
                   <h3 className="font-semibold text-lg">{category.name}</h3>
@@ -81,42 +114,45 @@ export default function Dashboard() {
                 className="overflow-hidden transition-all hover:shadow-md border-red-100 hover:border-primary"
               >
                 <Link href={`/products/${product.id}`}>
-                <div className="relative h-48 bg-white">
-                  <Image
-                    src={product.image || "/placeholder.svg"}
-                    alt={product.name}
-                    fill
-                    className="object-contain p-4"
-                  />
-                  {product.discount && (
-                    <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">
-                      {product.discount}% OFF
-                    </div>
-                  )}
-                </div>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-1 mb-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm">{product.rating}</span>
-                    <span className="text-xs text-muted-foreground">({product.reviews})</span>
+                  <div className="relative h-48 bg-white">
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      fill
+                      className="object-contain p-4"
+                    />
+                    {product.discount && (
+                      <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">
+                        {product.discount}% OFF
+                      </div>
+                    )}
                   </div>
-                  <h3 className="font-semibold">{product.name}</h3>
-                  <p className="text-muted-foreground text-sm mb-2">{product.seller}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-primary">${product.price.toFixed(2)}</span>
-                      {product.originalPrice && (
-                        <span className="text-muted-foreground text-sm line-through">
-                          ${product.originalPrice.toFixed(2)}
-                        </span>
-                      )}
+
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm">{product.rating}</span>
+                      <span className="text-xs text-muted-foreground">({product.reviews})</span>
                     </div>
-                    <Button size="sm" className="bg-primary hover:bg-primary/90">
-                      <ShoppingBag className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                </CardContent>
+
+                    <h3 className="font-semibold">{product.name}</h3>
+                    <p className="text-muted-foreground text-sm mb-2">{product.seller}</p>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-primary">${product.price.toFixed(2)}</span>
+                        {product.originalPrice && (
+                          <span className="text-muted-foreground text-sm line-through">
+                            ${product.originalPrice.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <Button size="sm" className="bg-primary hover:bg-primary/90">
+                        <ShoppingBag className="h-4 w-4 mr-1" /> Add
+                      </Button>
+                    </div>
+                  </CardContent>
                 </Link>
               </Card>
             ))}
@@ -141,21 +177,23 @@ export default function Dashboard() {
             >
               <div className="flex flex-col md:flex-row">
                 <div className="relative w-full md:w-1/3 h-32 md:h-auto">
-                  <Image src={service.image || "/placeholder.svg"} alt={service.name} fill className="object-cover" />
+                  <Image src={service.image} alt={service.name} fill className="object-cover" />
                 </div>
+
                 <CardContent className="p-4 flex-1">
                   <div className="flex items-center gap-1 mb-1">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                     <span className="text-sm">{service.rating}</span>
                     <span className="text-xs text-muted-foreground">({service.reviews})</span>
                   </div>
+
                   <h3 className="font-semibold">{service.name}</h3>
                   <p className="text-muted-foreground text-sm mb-2">{service.provider}</p>
+
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-bold text-primary">Starting at ${service.price.toFixed(2)}</span>
                     <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10">
-                      <Briefcase className="h-4 w-4 mr-1" />
-                      Details
+                      <Briefcase className="h-4 w-4 mr-1" /> Details
                     </Button>
                   </div>
                 </CardContent>
@@ -172,47 +210,54 @@ export default function Dashboard() {
             <div className="lg:w-1/2">
               <h2 className="text-3xl font-bold mb-4">Become a Seller Today</h2>
               <p className="text-white/90 mb-6">
-                Join thousands of successful sellers on our platform. Reach more customers and grow your business with
-                our powerful tools and support.
+                Join thousands of successful sellers on our platform. Reach more customers and grow your business.
               </p>
               <Button className="bg-white text-primary hover:bg-white/90" size="lg" asChild>
                 <Link href="/seller-signup">Start Selling</Link>
               </Button>
             </div>
+
             <div className="lg:w-1/2 grid grid-cols-2 gap-4">
               <div className="bg-white/10 p-6 rounded-none">
                 <TrendingUp className="h-8 w-8 mb-2" />
                 <h3 className="text-xl font-semibold mb-2">Grow Your Business</h3>
                 <p className="text-white/80">
-                  Access millions of potential customers looking for your products and services.
+                  Access millions of potential customers.
                 </p>
               </div>
+
               <div className="bg-white/10 p-6 rounded-none">
                 <ShoppingBag className="h-8 w-8 mb-2" />
                 <h3 className="text-xl font-semibold mb-2">Easy Management</h3>
                 <p className="text-white/80">
-                  Powerful tools to manage your inventory, orders, and customer relationships.
+                  Manage products, orders, and customers.
                 </p>
               </div>
+
               <div className="bg-white/10 p-6 rounded-none">
                 <Star className="h-8 w-8 mb-2" />
                 <h3 className="text-xl font-semibold mb-2">Build Reputation</h3>
-                <p className="text-white/80">Earn reviews and ratings to establish trust with potential customers.</p>
+                <p className="text-white/80">
+                  Earn reviews and ratings.
+                </p>
               </div>
+
               <div className="bg-white/10 p-6 rounded-none">
                 <Briefcase className="h-8 w-8 mb-2" />
                 <h3 className="text-xl font-semibold mb-2">Sell Anything</h3>
                 <p className="text-white/80">
-                  List physical products or digital services with flexible pricing options.
+                  List physical or digital services.
                 </p>
               </div>
             </div>
           </div>
         </div>
       </section>
+
     </div>
-  )
+  );
 }
+
 
 // Sample data
 const categories = [

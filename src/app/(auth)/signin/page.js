@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -13,14 +14,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import { toast } from "sonner";
 import axios from "axios";
+
 import { useUserStore } from "@/store/user-store";
 import { consumer_login_url } from "@/constants/backend-urls";
 
-export default function SignIn() {
+export default function UserSignIn() {
   const { login } = useUserStore();
   const router = useRouter();
 
@@ -50,10 +54,7 @@ export default function SignIn() {
           role: "USER",
         };
 
-        const token = data.accessToken;
-
-        login(user, token, "USER");
-
+        login(user, data.accessToken, "USER");
         toast.success("Login successful");
         router.push("/dashboard");
       } else {
@@ -79,7 +80,7 @@ export default function SignIn() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             {/* Email */}
-            <div className="space-y-2">
+            <div>
               <Label>Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -96,7 +97,7 @@ export default function SignIn() {
             </div>
 
             {/* Password */}
-            <div className="space-y-2">
+            <div>
               <Label>Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -109,6 +110,7 @@ export default function SignIn() {
                   required
                 />
 
+                {/* Show/Hide Password Button */}
                 <Button
                   type="button"
                   variant="ghost"
@@ -127,9 +129,25 @@ export default function SignIn() {
               {isLoading ? "Logging in..." : "Login"}
             </Button>
 
+            {/*   FORGOT PASSWORD LINK */}
+            <p className="text-center text-sm">
+              <Link href="/forgot-password" className="text-primary underline">
+  Forgot Password?
+</Link>
+
+            </p>
+
+            <p className="text-center text-sm">
+  Didn’t receive email?{" "}
+  <Link href="/resend-verification" className="text-primary underline">
+    Resend Verification
+  </Link>
+</p>
+
+
             <p className="text-center text-sm">
               Don’t have an account?{" "}
-              <Link className="text-primary underline" href="/signup">
+              <Link href="/signup" className="text-primary underline">
                 Register
               </Link>
             </p>

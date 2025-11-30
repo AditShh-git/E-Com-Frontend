@@ -1,40 +1,25 @@
 // src/utils/consumerApi.js
-// Axios instance for consumer (user) APIs
-// Uses storage key: "consumer-auth"
+"use client";
 
 import axios from "axios";
+import { useUserStore } from "@/store/user-store";
 
 const API = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "",
-  withCredentials: false,
 });
 
-function readTokenFromStorage(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.token || parsed?.state?.token || parsed?.state?.user?.accessToken || parsed?.accessToken || null;
-  } catch {
-    return null;
-  }
-}
-
+//  Always attach User Token
 API.interceptors.request.use(
   (config) => {
-    // Prefer consumer token
-    const consumerRawToken = readTokenFromStorage("consumer-auth");
-    if (consumerRawToken) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${consumerRawToken}`;
-      return config;
-    }
+    try {
+      const token = useUserStore.getState().token;
 
-    // Backwards compatibility: if consumer-auth isn't present, try old user-storage
-    const fallback = readTokenFromStorage("user-storage");
-    if (fallback) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${fallback}`;
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.warn("USER TOKEN READ FAILED", e);
     }
 
     return config;

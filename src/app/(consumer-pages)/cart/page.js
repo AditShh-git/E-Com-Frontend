@@ -7,11 +7,19 @@ import { Button } from "@/components/ui/button";
 import API from "@/utils/consumerApi";
 import { toast } from "sonner";
 
+// ⬅️ NEW: Import Cart Store (GLOBAL)
+import { useCartStore } from "@/store/cart-store";
+
 export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingIds, setUpdatingIds] = useState(new Set());
   const [popupItem, setPopupItem] = useState(null);
+
+  // ⬅️ NEW: Zustand global cart
+  const { cartItems: globalCart, fetchCart: fetchCartStore, cartItems: storeCart, ...cartStore } =
+    useCartStore();
+  const setGlobalCart = (items) => useCartStore.setState({ cartItems: items });
 
   // Normalize backend response
   const normalizeCart = (res) => {
@@ -63,8 +71,10 @@ export default function CartPage() {
 
     const arr = normalizeCart(res);
 
-    // Keep inactive logic -> backend sends available=false if seller deactivated
+    // Local + Global Sync
     setCartItems(arr);
+    setGlobalCart(arr);
+
     setLoading(false);
   };
 
@@ -93,17 +103,22 @@ export default function CartPage() {
 
     markUpdating(cartId);
 
-    setCartItems((prev) =>
-      prev.map((it) =>
-        (it.id ?? it.cartId) === cartId ? { ...it, quantity: newQty } : it
-      )
+    const updated = cartItems.map((it) =>
+      (it.id ?? it.cartId) === cartId ? { ...it, quantity: newQty } : it
     );
+
+    // Local update
+    setCartItems(updated);
+    // GLOBAL UPDATE
+    setGlobalCart(updated);
 
     try {
       await API.put(`/aimdev/api/cart/update?cartId=${cartId}&quantity=${newQty}`);
     } catch (err) {
       toast.error("Failed to update. Reverting.");
+
       setCartItems(prev);
+      setGlobalCart(prev);
     } finally {
       unmarkUpdating(cartId);
     }
@@ -111,21 +126,27 @@ export default function CartPage() {
 
   const removeItem = async (cartId, silent = false) => {
     const prev = cartItems.map((it) => ({ ...it }));
+
     markUpdating(cartId);
 
-    setCartItems((prev) =>
-      prev.filter((it) => (it.id ?? it.cartId) !== cartId)
+    const updated = cartItems.filter(
+      (it) => (it.id ?? it.cartId) !== cartId
     );
+
+    // Local remove
+    setCartItems(updated);
+    // GLOBAL remove
+    setGlobalCart(updated);
 
     try {
       await API.delete(`/aimdev/api/cart/remove?cartId=${cartId}`);
 
-      if (!silent) {
-        toast.success("Item removed");
-      }
+      if (!silent) toast.success("Item removed");
     } catch (err) {
       toast.error("Could not remove. Reverting.");
+
       setCartItems(prev);
+      setGlobalCart(prev);
     } finally {
       unmarkUpdating(cartId);
     }
@@ -157,6 +178,7 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="flex flex-col md:flex-row gap-8">
+            
             {/* LEFT SECTION */}
             <div className="flex-1 space-y-4">
               {cartItems.map((it) => {
@@ -170,11 +192,8 @@ export default function CartPage() {
                   <div
                     key={cartId}
                     className={`flex items-center gap-4 border rounded p-4 shadow-sm transition-all 
-                      ${
-                        it.available === false
-                          ? "bg-gray-100 opacity-70"
-                          : "bg-white hover:shadow-md"
-                      }`}
+                      ${it.available === false ? "bg-gray-100 opacity-70" : "bg-white hover:shadow-md"}
+                    `}
                   >
                     <img
                       src={img}
@@ -185,7 +204,6 @@ export default function CartPage() {
                     <div className="flex-1">
                       <div className="font-medium text-lg">{title}</div>
 
-                      {/* Warning if product is inactive */}
                       {it.available === false && (
                         <div className="text-red-600 text-sm font-semibold mt-1">
                           ⚠ This product is no longer available
@@ -193,7 +211,8 @@ export default function CartPage() {
                       )}
 
                       <div className="flex items-center gap-3 mt-3">
-                        {/* Disable minus */}
+
+                        {/* MINUS */}
                         <Button
                           size="icon"
                           variant="outline"
@@ -205,7 +224,7 @@ export default function CartPage() {
 
                         <div className="w-8 text-center">{qty}</div>
 
-                        {/* Disable plus */}
+                        {/* PLUS */}
                         <Button
                           size="icon"
                           variant="outline"
@@ -215,7 +234,7 @@ export default function CartPage() {
                           <Plus className="h-4 w-4" />
                         </Button>
 
-                        {/* Remove */}
+                        {/* REMOVE */}
                         <Button
                           size="icon"
                           variant="destructive"
@@ -235,7 +254,7 @@ export default function CartPage() {
               })}
             </div>
 
-            {/* RIGHT SUMMARY */}
+            {/* RIGHT SECTION */}
             <div className="w-full md:w-1/3 bg-white border rounded p-6 shadow-lg">
               <h2 className="text-xl font-bold mb-4">Order Summary</h2>
 
@@ -260,15 +279,12 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {/* Updated Checkout Button Logic */}
               <Button
                 className="w-full mt-6 bg-primary text-white"
                 disabled={hasUnavailableItems}
                 onClick={() => {
                   if (hasUnavailableItems) {
-                    toast.error(
-                      "Some items are no longer available. Remove them before checkout."
-                    );
+                    toast.error("Some items are no longer available. Remove them before checkout.");
                     return;
                   }
                   window.location.href = "/checkout";
@@ -282,10 +298,11 @@ export default function CartPage() {
         )}
       </div>
 
-      {/* POPUP UI */}
+      {/* POPUP */}
       {popupItem && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[999]">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-[550px] flex gap-5 animate-scaleIn">
+
             <div className="w-40 h-40 rounded-lg overflow-hidden border">
               <img
                 src={getImageUrl(popupItem.item)}
@@ -298,12 +315,12 @@ export default function CartPage() {
               <div>
                 <h3 className="text-xl font-bold">Remove Item?</h3>
                 <p className="text-gray-600 mt-2 text-sm">
-                  Would you like to move this item to your wishlist or remove it
-                  permanently?
+                  Move to wishlist or remove permanently?
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 mt-4">
+
                 <Button
                   className="bg-pink-600 hover:bg-pink-700 text-white"
                   onClick={async () => {
@@ -314,7 +331,7 @@ export default function CartPage() {
                       toast.success("Moved to wishlist ❤️");
 
                       removeItem(popupItem.cartId, true);
-                    } catch (err) {
+                    } catch {
                       toast.error("Failed to move to wishlist");
                     } finally {
                       setPopupItem(null);
@@ -339,6 +356,7 @@ export default function CartPage() {
                 </Button>
               </div>
             </div>
+
           </div>
         </div>
       )}
@@ -351,7 +369,7 @@ export default function CartPage() {
           }
           to {
             transform: scale(1);
-            opacity: 1;
+            opacity: 1);
           }
         }
         .animate-scaleIn {

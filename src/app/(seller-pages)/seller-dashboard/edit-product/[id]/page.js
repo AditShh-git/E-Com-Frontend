@@ -15,6 +15,7 @@ import {
 
 import { getToken } from "@/utils/sellerApi";
 import SellerBlocked from "@/components/ui-components/SellerBlocked";
+import { toast } from "sonner";
 
 export default function EditProductPage({ params }) {
   const { id } = use(params);
@@ -96,6 +97,7 @@ export default function EditProductPage({ params }) {
         ...prev,
         existingImages: prev.existingImages.filter((x) => x.imageId !== imageId),
       }));
+
     } catch (err) {
       const status = err?.response?.status;
       if (status === 403) setBlocked(true);
@@ -132,8 +134,12 @@ export default function EditProductPage({ params }) {
         });
       }
 
-      alert("Product updated!");
-      window.location.href = "/seller-dashboard?tab=products";
+      //  Toast popup instead of alert
+      toast.success("Product updated successfully!");
+
+      setTimeout(() => {
+        window.location.href = "/seller-dashboard?tab=products";
+      }, 1000);
 
     } catch (err) {
       const status = err?.response?.status;
@@ -148,6 +154,7 @@ export default function EditProductPage({ params }) {
       }
 
       console.error(err);
+      toast.error("Error updating product");
     }
   };
 

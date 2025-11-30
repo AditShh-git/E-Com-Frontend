@@ -23,28 +23,76 @@ import {
   updateSellerProduct,
 } from "@/utils/sellerApi";
 
-// NEW POP-UP COMPONENT
 import ConfirmDialog from "@/components/ui-components/ConfirmDialog";
+import { useSellerStore } from "@/store/seller-store";
 
 export default function ProductsPage() {
   const router = useRouter();
+
+  // Get fresh seller from Zustand
+  const seller = useSellerStore((s) => s.seller);
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showInactive, setShowInactive] = useState(false);
 
-  // 🎯 Popup States
+  const [blocked, setBlocked] = useState(false);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [actionType, setActionType] = useState(""); // "activate" or "deactivate"
+  const [actionType, setActionType] = useState("");
+
+  /* ==========================================================
+     ACCESS CHECK — BLOCK ONLY IF REAL UNVERIFIED SELLER
+  ========================================================== */
 
   useEffect(() => {
-    loadProducts(showInactive);
-  }, [showInactive]);
+    if (!seller) return;
 
+    console.log("Seller in ProductsPage:", seller);
+
+    if (seller.emailVerified !== true) {
+      setBlocked(true);
+      setLoading(false);
+      return;
+    }
+
+    if (seller.verified !== true) {
+      setBlocked(true);
+      setLoading(false);
+      return;
+    }
+
+    if (seller.locked === true) {
+      setBlocked(true);
+      setLoading(false);
+      return;
+    }
+
+    // Verified & Approved Seller → load products
+    loadProducts(showInactive);
+  }, [seller, showInactive]);
+
+  /* ==========================================================
+     LOAD PRODUCTS
+  ========================================================== */
   async function loadProducts(show) {
+  try {
     const res = await getSellerProducts(show);
-    const backendProducts = res?.data?.data || [];
+
+    if (res.status !== "SUCCESS") {
+      toast.error("Failed to load products");
+      return;
+    }
+
+    console.log("PRODUCT LIST RESPONSE:", res);
+
+    // 💥 CORRECT EXTRACTION
+    const backendProducts =
+      res?.data?.data?.data ||
+      res?.data?.data ||
+      [];
+
     const base = process.env.NEXT_PUBLIC_BACKEND_URL;
 
     const mapped = backendProducts.map((p) => {
@@ -66,24 +114,30 @@ export default function ProductsPage() {
     });
 
     setProducts(mapped);
+
+  } catch (err) {
+    toast.error("Failed to load products");
+  } finally {
     setLoading(false);
   }
+}
 
-  // 📌 Open Popup
+
+  /* ==========================================================
+     DIALOG HANDLERS
+  ========================================================== */
   const openDialog = (product, type) => {
     setSelectedProduct(product);
     setActionType(type);
     setDialogOpen(true);
   };
 
-  // 📌 Close Popup
   const closeDialog = () => {
     setDialogOpen(false);
     setSelectedProduct(null);
     setActionType("");
   };
 
-  // 📌 When user confirms popup action
   const handleConfirmAction = async () => {
     if (!selectedProduct) return;
 
@@ -99,9 +153,7 @@ export default function ProductsPage() {
           )
         );
         toast.success("Product deactivated");
-      } else {
-        toast.error("Failed to deactivate");
-      }
+      } else toast.error("Failed to deactivate");
     }
 
     if (actionType === "activate") {
@@ -118,33 +170,61 @@ export default function ProductsPage() {
           )
         );
         toast.success("Product activated");
-      } else {
-        toast.error("Failed to activate");
-      }
+      } else toast.error("Failed to activate");
     }
 
     closeDialog();
   };
 
+  /* ==========================================================
+     ACCESS BLOCK UI
+  ========================================================== */
+
+  if (blocked) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <div className="bg-white p-6 rounded-xl shadow-lg text-center max-w-sm">
+          <h2 className="text-xl font-bold text-red-600">Access Restricted</h2>
+
+          {seller?.emailVerified !== true && (
+            <p className="mt-3 text-gray-700">
+              Please verify your email to access Products.
+            </p>
+          )}
+
+          {seller?.emailVerified === true && seller?.verified !== true && (
+            <p className="mt-3 text-gray-700">
+              Your seller account is <b>not approved by Admin</b>.
+            </p>
+          )}
+
+          {seller?.locked === true && (
+            <p className="mt-3 text-gray-700">
+              Your account is <b>locked by Admin</b>.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ==========================================================
+     MAIN UI
+  ========================================================== */
+
   if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <>
-      {/* ======================= */}
-      {/* CONFIRM POPUP DIALOG */}
-      {/* ======================= */}
+      {/* Dialog */}
       <ConfirmDialog
         open={dialogOpen}
         title={
-          actionType === "deactivate"
-            ? "Deactivate Product"
-            : "Activate Product"
+          actionType === "deactivate" ? "Deactivate Product" : "Activate Product"
         }
         description={
           selectedProduct
-            ? `Are you sure you want to ${
-                actionType === "deactivate" ? "deactivate" : "activate"
-              } "${selectedProduct.pname}"?`
+            ? `Are you sure you want to ${actionType} "${selectedProduct.pname}"?`
             : ""
         }
         confirmText={actionType === "deactivate" ? "Deactivate" : "Activate"}
@@ -169,6 +249,7 @@ export default function ProductsPage() {
           </div>
         </div>
 
+        {/* Product Table */}
         <div className="bg-white rounded-lg border">
           <Table>
             <TableHeader>
@@ -221,9 +302,7 @@ export default function ProductsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        router.push(
-                          `/seller-dashboard/edit-product/${p.docId}`
-                        )
+                        router.push(`/seller-dashboard/edit-product/${p.docId}`)
                       }
                     >
                       Edit
@@ -252,6 +331,7 @@ export default function ProductsPage() {
                 </TableRow>
               ))}
             </TableBody>
+
           </Table>
         </div>
       </div>

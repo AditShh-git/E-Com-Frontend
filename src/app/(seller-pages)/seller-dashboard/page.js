@@ -17,7 +17,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import Overview from "./overview";
@@ -26,45 +25,82 @@ import Orders from "./orders";
 import Customers from "./customers";
 import Analytics from "./analytics";
 
-// ------------------------------
-// READ SELLER NAME
-// ------------------------------
-let username = "";
-const loginSellerDetails =
-  typeof window !== "undefined"
-    ? localStorage.getItem("user-storage")
-    : null;
-
-if (loginSellerDetails) {
-  try {
-    const parsed = JSON.parse(loginSellerDetails);
-    username = parsed?.state?.user?.username || "";
-  } catch {}
-}
+import { useSellerStore } from "@/store/seller-store";
+import { getSellerProfile } from "@/utils/sellerApi";
 
 export default function SellerDashboard() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Read tab from URL
   const urlTab = searchParams.get("tab") || "overview";
-
   const [activeTab, setActiveTab] = useState(urlTab);
+
+  // Zustand store
+  const seller = useSellerStore((s) => s.seller);
+  const setSeller = useSellerStore((s) => s.setSeller);
+
   const [isMounted, setIsMounted] = useState(false);
 
+  // Avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Sync tab UI when URL changes
+  // Fetch latest seller data
+  useEffect(() => {
+    if (!isMounted) return;
+
+    async function loadSeller() {
+      try {
+        const res = await getSellerProfile();
+        console.log("Seller /me:", res);
+
+        if (!res || res.status !== "SUCCESS") {
+          console.warn("Invalid /me response:", res);
+          return;
+        }
+
+        // ✔ Store only the real seller object
+        setSeller(res.data.seller);
+
+      } catch (err) {
+        console.error("Failed to load seller:", err);
+      }
+    }
+
+    loadSeller();
+  }, [isMounted, setSeller]);
+
+  // Sync tab
   useEffect(() => {
     setActiveTab(urlTab);
   }, [urlTab]);
 
-  // Change URL when tab changes
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     router.push(`/seller-dashboard?tab=${tab}`);
+  };
+
+  // Build seller image URL
+  const getSellerImage = () => {
+    const backend = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const img =
+      seller?.imageUrl ||
+      seller?.profileImage ||
+      seller?.image ||
+      "";
+
+    if (!img) return "/placeholder.svg";
+
+    const fixed = img.replace(
+      "/api/files/private",
+      "/aimdev/api/files/public"
+    );
+
+    if (fixed.startsWith("http")) return fixed;
+    if (fixed.startsWith("/")) return backend + fixed;
+
+    return `${backend}/${fixed}`;
   };
 
   if (!isMounted) return null;
@@ -72,13 +108,16 @@ export default function SellerDashboard() {
   return (
     <div className="flex min-h-screen bg-muted/30">
 
+      {/* ============================= */}
       {/* SIDEBAR */}
+      {/* ============================= */}
       <div className="hidden md:flex flex-col w-64 bg-white border-r">
         <div className="p-4 border-b">
           <h2 className="font-bold text-xl text-primary">Seller Dashboard</h2>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
+
           <Button
             variant="ghost"
             className={`w-full justify-start ${
@@ -133,10 +172,13 @@ export default function SellerDashboard() {
             <TrendingUp className="h-5 w-5 mr-3" />
             Analytics
           </Button>
+
         </nav>
       </div>
 
+      {/* ============================= */}
       {/* MAIN CONTENT */}
+      {/* ============================= */}
       <div className="flex-1">
         <header className="bg-white border-b p-4 flex items-center justify-between">
           <h2 className="md:hidden font-bold text-xl text-primary">
@@ -144,6 +186,8 @@ export default function SellerDashboard() {
           </h2>
 
           <div className="flex items-center ml-auto">
+
+            {/* Search bar */}
             <div className="relative mr-4">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -153,25 +197,40 @@ export default function SellerDashboard() {
               />
             </div>
 
-            <Button variant="outline" size="sm" className="mr-2">
+            <Button variant="outline" size="sm" className="mr-3">
               <Link href="/messages">Messages</Link>
             </Button>
 
-            <div className="flex items-center gap-2">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden">
+            {/* SELLER PROFILE INFO */}
+            <div className="flex items-center gap-3">
+
+              {/* Profile Image */}
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border">
                 <Image
-                  src="/placeholder.svg"
-                  alt="Profile"
+                  src={getSellerImage()}
+                  alt="Seller Profile"
                   fill
                   className="object-cover"
                 />
               </div>
-              <span className="hidden md:inline font-medium">{username}</span>
+
+              {/* Username + Email + SellerID */}
+              <div className="hidden md:flex flex-col leading-tight text-right">
+                <span className="font-semibold">{seller?.userName}</span>
+                <span className="text-xs text-gray-500">{seller?.email}</span>
+
+                <span className="px-2 mt-1 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-md inline-block">
+                  {seller?.sellerId}
+                </span>
+              </div>
+
             </div>
           </div>
         </header>
 
+        {/* ============================= */}
         {/* TAB CONTENT */}
+        {/* ============================= */}
         <main className="p-6">
           <Tabs value={activeTab}>
             <TabsContent value="overview">
@@ -195,6 +254,7 @@ export default function SellerDashboard() {
             </TabsContent>
           </Tabs>
         </main>
+
       </div>
     </div>
   );

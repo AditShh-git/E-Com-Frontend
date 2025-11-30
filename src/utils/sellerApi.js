@@ -59,6 +59,7 @@ export async function safeFetch(url, options = {}) {
     });
 
     const text = await res.text();
+
     try {
       return JSON.parse(text);
     } catch {
@@ -73,6 +74,15 @@ export async function safeFetch(url, options = {}) {
 // PUBLIC FILES
 // ------------------------------------------------------
 export const PUBLIC_FILE_URL = `${BASE_URL}/aimdev/api/files/public`;
+
+// =======================================================
+// GET LOGGED-IN SELLER PROFILE  
+// =======================================================
+export async function getSellerProfile() {
+  return safeFetch(`${BASE_URL}/aimdev/api/seller/me`, {
+    method: "GET",
+  });
+}
 
 // =======================================================
 // SELLER DASHBOARD / ANALYTICS
@@ -150,11 +160,15 @@ export async function deleteProductImage(productId, imageId) {
   );
 }
 
+// =======================================================
 // EXPORT ALL
+// =======================================================
 export default {
   getToken,
   safeFetch,
   PUBLIC_FILE_URL,
+
+  getSellerProfile, 
 
   getSellerOverview,
   getSellerAnalyticsOverview,
