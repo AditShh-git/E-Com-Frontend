@@ -2,6 +2,7 @@ console.log("BASE_URL =", process.env.NEXT_PUBLIC_BACKEND_URL);
 
 export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+
 /* ============================================================
    AUTH (FINAL FIXED PATHS)
 ============================================================ */
@@ -93,6 +94,12 @@ export const user_order_list_url = `${BASE_URL}/aimdev/api/orders/user`;
 export const order_status_update_url = `${BASE_URL}/aimdev/api/orders/status/update`;
 export const order_detail_url = (id) =>
   `${BASE_URL}/aimdev/api/order/${id}`;
+
+export const getalluserOrder = `${BASE_URL}/aimdev/api/orders/all`;
+
+export const seller_order_list_url = `${BASE_URL}/aimdev/api/seller/orders`;
+
+
 
 /* ============================================================
    PAYMENT

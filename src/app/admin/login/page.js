@@ -39,7 +39,7 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
 
-    // 🔥 Clear old user/seller tokens
+    //  Clear old user/seller tokens
     localStorage.removeItem("user-storage");
 
     try {

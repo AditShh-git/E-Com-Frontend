@@ -18,7 +18,6 @@ import { useUserStore } from "@/store/user-store";
 import { useRouter } from "next/navigation";
 
 export default function Analytics() {
-  const [activeTab, setActiveTab] = useState("analytics");
   const [loading, setLoading] = useState(true);
 
   const [overview, setOverview] = useState(null);
@@ -40,9 +39,7 @@ export default function Analytics() {
   }, [isLoggedIn, role]);
 
   useEffect(() => {
-    if (token) {
-      fetchAnalyticsDashboard();
-    }
+    if (token) fetchAnalyticsDashboard();
   }, [token]);
 
   const fetchAnalyticsDashboard = async () => {
@@ -55,7 +52,6 @@ export default function Analytics() {
           },
         }
       );
-
       const data = res.data?.data?.data;
 
       setOverview(data.summary);
@@ -79,32 +75,41 @@ export default function Analytics() {
 
   return (
     <div className="flex min-h-screen bg-muted/30">
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <AdminSidebar activeTab="analytics" />
 
       <div className="flex-1">
         <header className="bg-white border-b p-4">
           <h1 className="text-2xl font-bold text-primary">Analytics & Reporting</h1>
-          <p className="text-muted-foreground">Store performance overview</p>
+          <p className="text-muted-foreground">Dashboard Overview</p>
+
+          <div className="mt-4 max-w-xs">
+            <input
+              placeholder="Data Range"
+              className="w-full border rounded-lg p-2 text-sm"
+            />
+          </div>
         </header>
 
         <div className="p-4 sm:p-6 md:p-10 bg-[#fef6ef] min-h-screen">
+
           {/* TOP METRICS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-10">
             <MetricCard label="Total Revenue" value={`$${overview.totalRevenue}`} />
             <MetricCard label="Sales Trends" value={`${overview.salesTrendPercent}%`} />
             <MetricCard label="User Growth" value={`${overview.newUsers} new users`} />
             <MetricCard label="Order Volume" value={`${overview.orderVolume} orders`} />
-            <MetricCard label="Top Selling Product" value={overview.topSellingProduct} />
+            <MetricCard label="Top Selling Products" value={overview.topSellingProduct} />
           </div>
 
           {/* CHARTS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+            
             {/* Sales Performance */}
             <div className="bg-white rounded-xl shadow p-6 border">
               <h2 className="text-xl font-semibold mb-2">Sales Performance</h2>
               <p className="text-3xl font-bold">${salesPerformance.totalSalesLast30Days}</p>
               <p className="text-gray-500 mb-4">
-                Last 30 days{" "}
+                Last 30 Days{" "}
                 <span className="text-green-600">+{salesPerformance.percentChange}%</span>
               </p>
 
@@ -132,7 +137,7 @@ export default function Analytics() {
               <h2 className="text-xl font-semibold mb-2">User Activity</h2>
               <p className="text-3xl font-bold">{userActivity.totalActiveUsers}</p>
               <p className="text-gray-500 mb-4">
-                Last 30 days{" "}
+                Last 30 Days{" "}
                 <span className="text-green-600">+{userActivity.percentChange}%</span>
               </p>
 
@@ -150,9 +155,9 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* SALES PERFORMANCE TABLE */}
+          {/* SALES TABLE */}
           <div className="bg-white rounded-xl shadow p-6 border mb-10">
-            <h2 className="text-xl font-semibold mb-4">Sales Performance Report</h2>
+            <h2 className="text-xl font-semibold mb-4">Detailed Reports</h2>
 
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
@@ -176,6 +181,32 @@ export default function Analytics() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* CUSTOM REPORT GENERATION */}
+          <div className="bg-white rounded-xl shadow p-6 border mb-10">
+            <h2 className="text-xl font-semibold mb-4">Custom Report Generation</h2>
+
+            <div className="grid gap-4 max-w-md">
+              <input
+                className="p-2 border rounded-lg"
+                placeholder="Select Metrics"
+              />
+              <input
+                className="p-2 border rounded-lg"
+                placeholder="Apply Filters"
+              />
+              <input
+                className="p-2 border rounded-lg"
+                placeholder="Define Time Period"
+              />
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <button className="bg-red-700 text-white px-4 py-2 rounded-lg">
+                Generate Report
+              </button>
             </div>
           </div>
 

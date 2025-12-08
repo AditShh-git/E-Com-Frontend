@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -17,12 +17,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useUserStore } from "@/store/user-store";
 
-export default function AdminSidebar({ activeTab, setActiveTab }) {
+export default function AdminSidebar({ activeTab }) {
   const router = useRouter();
+  const pathname = usePathname();
   const logout = useUserStore((state) => state.logout);
 
   const handleLogout = () => {
-    logout(); // ❗ CLEAR ZUSTAND STORE (Important)
+    logout();
 
     toast.success("Logged out", {
       description: "You have been successfully logged out.",
@@ -32,7 +33,7 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
   };
 
   const menuItems = [
-    { id: "overview", label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
     { id: "users", label: "Users", icon: Users, href: "/admin/users" },
     { id: "sellers", label: "Seller Verification", icon: UserCheck, href: "/admin/sellers" },
     { id: "products", label: "Products", icon: ShoppingBag, href: "/admin/products" },
@@ -60,23 +61,23 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
       <nav className="flex-1 p-4 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive =
+            activeTab === item.id || pathname === item.href;
 
           return (
-            <Link key={item.id} href={item.href}>
-              <Button
-                variant="ghost"
-                className={`w-full justify-start ${
-                  isActive
-                    ? "bg-primary/10 text-primary border-r-2 border-primary"
-                    : "hover:bg-muted"
-                }`}
-                onClick={() => setActiveTab(item.id)}
-              >
-                <Icon className="h-5 w-5 mr-3" />
-                {item.label}
-              </Button>
-            </Link>
+            <Button
+              key={item.id}
+              variant="ghost"
+              onClick={() => router.push(item.href)}
+              className={`w-full justify-start ${
+                isActive
+                  ? "bg-primary/10 text-primary border-r-2 border-primary"
+                  : "hover:bg-muted"
+              }`}
+            >
+              <Icon className="h-5 w-5 mr-3" />
+              {item.label}
+            </Button>
           );
         })}
       </nav>

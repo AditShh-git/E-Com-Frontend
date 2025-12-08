@@ -1,94 +1,209 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import AdminSidebar from "@/components/ui-components/admin-sidebar"
+import { useState, useEffect } from "react";
+import axios from "axios";
+import AdminSidebar from "@/components/ui-components/admin-sidebar";
+import { useUserStore } from "@/store/user-store";
+
+const BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api`;
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState("settings")
-  const [commission, setCommission] = useState(0)
+  const token = useUserStore((s) => s.token);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch settings
+  const loadSettings = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await axios.get(`${BASE}/admin/settings/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSettings(res.data);
+    } catch (err) {
+      console.error("Error loading settings:", err);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, [token]);
+
+  // Save setting to backend
+  const saveSetting = async (key, value) => {
+    try {
+      await axios.post(
+        `${BASE}/admin/settings/save`,
+        null,
+        {
+          params: { key, value },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    } catch (err) {
+      console.error("Saving error:", err);
+    }
+  };
+
+  // Update UI + save
+  const handleChange = (section, key, value) => {
+    setSettings((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [key]: value,
+      },
+    }));
+    saveSetting(key, value);
+  };
+
+  if (!token) return <div className="p-10 text-xl">Validating session...</div>;
+  if (loading || !settings) return <div className="p-10 text-xl">Loading settings...</div>;
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="flex min-h-screen bg-gray-100">
+      <AdminSidebar activeTab="settings" />
 
-      <div className="flex-1">
-        {/* Page Header */}
-        <header className="bg-white border-b p-4">
-          <h1 className="text-2xl font-bold text-primary">Admin Settings</h1>
-          <p className="text-muted-foreground">Manage all admin settings</p>
-        </header>
+      <main className="flex-1 p-8">
+        <h1 className="text-2xl font-bold mb-6">Platform Settings</h1>
 
-        {/* Main Content */}
-        <div className="flex flex-col w-full p-6 bg-red-50 dark:bg-gray-900 text-gray-800 dark:text-white">
-          {/* Platform Preferences */}
-          <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4">Platform Preferences</h2>
+        {/* GENERAL */}
+        <Section title="General Settings">
+          {Object.entries(settings.general).map(([key, val]) => (
+            <InputField
+              key={key}
+              label={beautify(key)}
+              value={val}
+              onChange={(v) => handleChange("general", key, v)}
+            />
+          ))}
+        </Section>
 
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
-              <h3 className="text-base font-semibold mb-2">Delivery Toggle</h3>
-              <div className="flex items-center justify-between">
-                <p className="text-sm">Enable or disable delivery options for all listed products</p>
-                <label className="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600"></div>
-                  </label>
-              </div>
-            </div>
-          </section>
+        {/* FEATURES */}
+        <Section title="Feature Configurations">
+          {Object.entries(settings.features).map(([key, val]) => (
+            <ToggleField
+              key={key}
+              label={beautify(key)}
+              checked={val === "true"}
+              onChange={(v) =>
+                handleChange("features", key, v ? "true" : "false")
+              }
+            />
+          ))}
+        </Section>
 
-          {/* Admin Roles */}
-          <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4">Admin Roles</h2>
-            <table className="min-w-full text-sm text-left border border-gray-200 rounded-xl">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-4">Name</th>
-                  <th className="p-4">Email</th>
-                  <th className="p-4">Role</th>
-                  <th className="p-4">Permission</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800">
-                <tr className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="p-4">Emily Carter</td>
-                  <td className="p-4">emily.carter@email.com</td>
-                  <td className="p-4">
-                    <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-xl font-medium">
-                      Admin
-                    </span>
-                  </td>
-                  <td className="p-4">Full Access</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
+        {/* PAYMENT */}
+        <Section title="Payment Settings">
+          {Object.entries(settings.payment).map(([key, val]) => (
+            <InputField
+              key={key}
+              label={beautify(key)}
+              value={val}
+              onChange={(v) => handleChange("payment", key, v)}
+            />
+          ))}
+        </Section>
 
-          {/* Notification Toggles */}
-          <section className="mb-8">
-            <h2 className="text-xl font-bold mb-4">Notification Toggles</h2>
+        {/* SHIPPING */}
+        <Section title="Shipping Settings">
+          {Object.entries(settings.shipping).map(([key, val]) => (
+            <InputField
+              key={key}
+              label={beautify(key)}
+              value={val}
+              onChange={(v) => handleChange("shipping", key, v)}
+            />
+          ))}
+        </Section>
 
-            {[
-              { label: "New Listings", description: "Receive notifications for new products" },
-              { label: "User Feedback", description: "Receive user feedback for new products" },
-              { label: "New Messages", description: "Receive messages for new products" },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="bg-white dark:bg-gray-800 mb-6 p-4 rounded-xl shadow"
-              >
-                <h3 className="text-base font-semibold mb-2">{item.label}</h3>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{item.description}</p>
-                  <label className="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600"></div>
-                  </label>
-                </div>
-              </div>
-            ))}
-          </section>
+        {/* POLICY */}
+        <Section title="Policy Management">
+          {Object.entries(settings.policy).map(([key, val]) => (
+            <InputField
+              key={key}
+              label={beautify(key)}
+              value={val}
+              onChange={(v) => handleChange("policy", key, v)}
+            />
+          ))}
+        </Section>
+
+        {/* SECURITY */}
+        <Section title="Security Settings">
+          {Object.entries(settings.security).map(([key, val]) => (
+            <InputField
+              key={key}
+              label={beautify(key)}
+              value={val}
+              onChange={(v) => handleChange("security", key, v)}
+            />
+          ))}
+        </Section>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={loadSettings}
+            className="px-6 py-2 bg-primary text-white rounded-lg shadow hover:opacity-90"
+          >
+            Refresh Values
+          </button>
         </div>
-      </div>
+      </main>
     </div>
-  )
+  );
+}
+
+/* UI Components */
+
+function Section({ title, children }) {
+  return (
+    <div className="mb-10 bg-white rounded-xl shadow p-6">
+      <h2 className="text-lg font-bold mb-4">{title}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{children}</div>
+    </div>
+  );
+}
+
+function InputField({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold mb-1">{label}</label>
+      <input
+        className="w-full p-2 border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-primary"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+function ToggleField({ label, checked, onChange }) {
+  return (
+    <div className="flex justify-between items-center border p-3 rounded-lg bg-gray-50">
+      <span className="font-medium">{label}</span>
+
+      <label className="inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <div className="
+          w-11 h-6 rounded-full bg-gray-300 peer-checked:bg-primary
+          relative transition-colors
+          after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+          after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-transform
+          peer-checked:after:translate-x-full
+        "></div>
+      </label>
+    </div>
+  );
+}
+
+function beautify(str) {
+  return str.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

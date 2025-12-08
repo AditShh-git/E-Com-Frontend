@@ -56,13 +56,14 @@ function OrderConfirmationDetails() {
 
   // Get JWT token
   const getToken = () => {
-    try {
-      return JSON.parse(localStorage.getItem("user-storage"))?.state?.user
-        ?.accessToken;
-    } catch {
-      return null;
-    }
-  };
+  try {
+    const data = JSON.parse(localStorage.getItem("user-storage"))?.state;
+    return data?.token || null;
+  } catch {
+    return null;
+  }
+};
+
 
   // --- DOWNLOAD INVOICE ---
   const downloadInvoice = async () => {

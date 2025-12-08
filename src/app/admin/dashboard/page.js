@@ -23,6 +23,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  CartesianGrid,
 } from "recharts";
 
 import {
@@ -37,22 +38,18 @@ import {
 import { useUserStore } from "@/store/user-store";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Correct way to access token (hydration-safe)
   const token = useUserStore((state) => state.token);
 
   useEffect(() => {
-    if (!token) return; // WAIT for Zustand hydration
+    if (!token) return;
     loadDashboard();
   }, [token]);
 
   const loadDashboard = async () => {
     try {
-      console.log("Using token:", token);
-
       const res = await axios.get(
         "http://localhost:8989/aimdev/api/admin/dashboard",
         {
@@ -64,26 +61,24 @@ export default function AdminDashboard() {
 
       setData(res.data.data.data);
     } catch (err) {
-      console.error("Dashboard Load Error:", err);
+      console.error("Dashboard Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!token)
-    return <div className="p-10 text-xl">Loading session...</div>;
-
-  if (loading || !data)
-    return <div className="p-10 text-xl">Loading Admin Dashboard...</div>;
+  if (!token) return <div className="p-10 text-xl">Loading session...</div>;
+  if (loading || !data) return <div className="p-10 text-xl">Loading Dashboard...</div>;
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar activeTab="dashboard" />
 
+      {/* MAIN CONTENT */}
       <main className="flex-1 p-8">
-        <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-6 text-primary">Dashboard</h1>
 
-        {/* ===== TOP CARDS ===== */}
+        {/* TOP METRIC CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           <MetricCard
             icon={<Users className="h-5 w-5 text-primary" />}
@@ -112,7 +107,7 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* ===== OVERVIEW ===== */}
+        {/* OVERVIEW */}
         <h2 className="text-xl font-semibold mt-10 mb-4">Overview</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -120,10 +115,10 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Revenue Trends</CardTitle>
-              <CardDescription>Monthly revenue performance</CardDescription>
+              <CardDescription>Last 12 months</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px]">
+              <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={Object.entries(data.revenueTrends).map(([month, value]) => ({
@@ -131,6 +126,7 @@ export default function AdminDashboard() {
                       value,
                     }))}
                   >
+                    <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip />
@@ -148,18 +144,18 @@ export default function AdminDashboard() {
               <CardDescription>Delivered / Shipped / Initial</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px]">
+              <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={Object.entries(data.orderDistribution).map(([status, count]) => ({
-                      status,
-                      count,
-                    }))}
+                    data={Object.entries(data.orderDistribution).map(
+                      ([status, count]) => ({ status, count })
+                    )}
                   >
+                    <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="status" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#e46a7a" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="count" fill="#e76f7c" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -167,14 +163,14 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* ===== RECENT USERS ===== */}
+        {/* RECENT USERS */}
         <h2 className="text-xl font-semibold mt-10 mb-4">Recent Users</h2>
 
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="bg-pink-100/60">
+                <TableRow className="bg-pink-100">
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
@@ -203,21 +199,20 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* ===== RECENT SELLERS ===== */}
+        {/* RECENT SELLERS */}
         <h2 className="text-xl font-semibold mt-10 mb-4">Recent Sellers</h2>
 
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="bg-pink-100/60">
+                <TableRow className="bg-pink-100">
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Verified</TableHead>
                   <TableHead>Created</TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
                 {data.sellers.map((s) => (
                   <TableRow key={s.id}>
@@ -226,7 +221,9 @@ export default function AdminDashboard() {
                     <TableCell>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
-                          s.verified ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                          s.verified
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
                         {s.verified ? "Verified" : "Pending"}
@@ -246,9 +243,9 @@ export default function AdminDashboard() {
 
 function MetricCard({ title, value, icon }) {
   return (
-    <Card>
+    <Card className="shadow-sm hover:shadow-md transition">
       <CardHeader className="flex flex-row justify-between items-center">
-        <p className="text-sm text-gray-700">{title}</p>
+        <p className="text-sm text-gray-600">{title}</p>
         {icon}
       </CardHeader>
       <CardContent>

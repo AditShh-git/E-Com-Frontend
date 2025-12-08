@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
+
 import {
   Search,
   Filter,
@@ -11,25 +12,26 @@ import {
   Eye,
   Download,
 } from "lucide-react";
+
 import AdminSidebar from "@/components/ui-components/admin-sidebar";
 import SellerImage from "@/components/ui-components/seller-image";
+import AuthImage from "@/components/ui-components/AuthImage";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -37,130 +39,141 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from "@/components/ui/dialog";
+
 import { toast } from "sonner";
 
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL; 
+const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function AdminSellers() {
-  // UI state
   const [activeTab, setActiveTab] = useState("sellers");
   const [search, setSearch] = useState("");
-  const [rawQuery, setRawQuery] = useState(""); // controlled input
-  const [filter, setFilter] = useState("all"); // all | verified | pending | rejected
+  const [rawQuery, setRawQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+
   const [sellers, setSellers] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [token, setToken] = useState(null);
 
-  // pagination (frontend)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // auth token
-  const [token, setToken] = useState(null);
-
-  // animation / optimistic state
-  const [loadingAction, setLoadingAction] = useState({}); // { [docId]: "approve" | "reject" | "downloading" }
-
-  // debounce ref
+  const [loadingAction, setLoadingAction] = useState({});
   const debounceRef = useRef(null);
 
-  // load token once
+  // ----------------------------
+  // TOKEN LOAD
+  // ----------------------------
   useEffect(() => {
     const storage = localStorage.getItem("user-storage");
-    if (!storage) {
-      toast.error("Please login.");
-      return;
-    }
+    if (!storage) return;
     try {
       const parsed = JSON.parse(storage);
       setToken(parsed.state.user.accessToken);
     } catch {
-      toast.error("Invalid auth storage. Please login again.");
+      toast.error("Invalid login data");
     }
   }, []);
 
-  // load sellers (unverified + verified)
+  // ----------------------------
+  // LOAD SELLERS
+  // ----------------------------
   useEffect(() => {
     if (!token) return;
+
     const load = async () => {
       try {
-        const [unvResp, verResp] = await Promise.all([
-          axios.get(`${BASE}/aimdev/api/admin/settings/seller/unverified`, {
+        const [unv, ver] = await Promise.all([
+          axios.get(`${BASE}/api/admin/settings/seller/unverified`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`${BASE}/aimdev/api/admin/settings/seller/verified`, {
+          axios.get(`${BASE}/api/admin/settings/seller/verified`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
 
-        // backend returns { message: "...", sellers: [...] }
-        const unv = Array.isArray(unvResp.data?.sellers) ? unvResp.data.sellers : [];
-        const ver = Array.isArray(verResp.data?.sellers) ? verResp.data.sellers : [];
-
-        // normalize each seller to consistent fields expected below
         const normalize = (s) => ({
-          docId: s.docId ?? s.id ?? s.docId,
-          sellerId: s.sellerId ?? s.sellerId,
-          fullName: s.userName ?? s.fullName ?? s.userName,
+          docId: s.docId,
+          sellerId: s.sellerId,
+          fullName: s.userName,
           email: s.email,
           phoneNo: s.phoneNo,
-          gst: s.gst ?? s.gstNumber,
-          aadhaar: s.adhaar ?? s.aadhaar ?? s.aadhaarNumber,
-          pan: s.panCard ?? s.pan ?? s.panNumber,
-          imageUrl: s.imageUrl ?? s.imageUrl,
-          verified: s.verified ?? s.varified ?? s.verified,
-          rejected: s.rejected ?? false, // client-side only unless backend provides
-          raw: s, // keep original
+          gst: s.gst,
+          aadhaar: s.adhaar,
+          pan: s.panCard,
+          imageUrl: s.imageUrl,
+          verified: s.verified,
+          rejected: s.rejected,
+          raw: s
         });
 
-        const combined = [...unv, ...ver].map(normalize);
+        const combined = [
+          ...(unv.data?.sellers || []).map(normalize),
+          ...(ver.data?.sellers || []).map(normalize)
+        ];
 
         setSellers(combined);
       } catch (err) {
-        console.error("Load sellers error:", err);
-        toast.error("Failed to load sellers. Check network & token.");
+        toast.error("Failed loading sellers");
       }
     };
 
     load();
   }, [token]);
 
-  // debounced live search
+  // ----------------------------
+  // DEBOUNCED SEARCH
+  // ----------------------------
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setSearch(rawQuery.trim());
-      setPage(1); // reset to first page
+      setPage(1);
     }, 300);
 
     return () => clearTimeout(debounceRef.current);
   }, [rawQuery]);
 
-  // derived data: add client-side status (verified / pending / rejected)
-  const sellersWithStatus = useMemo(() => {
-    return sellers.map((s) => {
-      let status = "pending";
-      if (s.verified === true || s.verified === "true") status = "verified";
-      else if (s.rejected === true) status = "rejected";
-      return { ...s, status };
-    });
-  }, [sellers]);
+  // ----------------------------
+  // BUILD IMAGE URL WITHOUT DOUBLE /aimdev
+  // ----------------------------
+  const buildImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith("http")) return imageUrl;
+    return `${BASE}${imageUrl}`;
+  };
 
-  // filtered + searched
+  // ----------------------------
+  // STATUS DECISION
+  // ----------------------------
+  const sellersWithStatus = useMemo(() =>
+    sellers.map((s) => {
+      let status = "pending";
+      if (s.verified) status = "verified";
+      if (s.rejected) status = "rejected";
+      return { ...s, status };
+    }), [sellers]);
+
+  // ----------------------------
+  // FILTER + SEARCH
+  // ----------------------------
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return sellersWithStatus.filter((s) => {
       const matchesFilter = filter === "all" ? true : s.status === filter;
       const matchesQuery =
         !q ||
-        (s.fullName && s.fullName.toLowerCase().includes(q)) ||
-        (s.email && s.email.toLowerCase().includes(q)) ||
-        (s.sellerId && s.sellerId.toLowerCase().includes(q));
+        s.fullName?.toLowerCase().includes(q) ||
+        s.email?.toLowerCase().includes(q) ||
+        s.sellerId?.toLowerCase().includes(q);
       return matchesFilter && matchesQuery;
     });
   }, [sellersWithStatus, filter, search]);
 
-  // pagination helpers
+  // ----------------------------
+  // PAGINATION
+  // ----------------------------
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageData = useMemo(() => {
@@ -168,84 +181,62 @@ export default function AdminSellers() {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  // helper to build image URL (backend path may be absolute or relative)
-  const buildImageUrl = (imageUrl) => {
-    if (!imageUrl) return null;
-    // if imageUrl is absolute (starts with http) return as-is
-    if (imageUrl.startsWith("http")) return imageUrl;
-    // imageUrl sample: "/api/files/private/53/view"
-    // If BASE contains aimdev or not? We assume BASE is plain host (no aimdev),
-    // so we use `${BASE}/aimdev${imageUrl}`
-    const trimmedBase = BASE?.replace(/\/$/, "") ?? "";
-    return `${trimmedBase}/aimdev${imageUrl}`;
-  };
-
-  // Approve / Reject action (optimistic + animation)
+  // ----------------------------
+  // VERIFY ACTION
+  // ----------------------------
   const handleVerify = async (docId, sellerId, doApprove) => {
-    if (!token) {
-      toast.error("Not authenticated.");
-      return;
-    }
+    if (!token) return;
 
-    // optimistic update: set loading state
-    setLoadingAction((prev) => ({ ...prev, [docId]: doApprove ? "approve" : "reject" }));
+    setLoadingAction((p) => ({ ...p, [docId]: doApprove ? "approve" : "reject" }));
 
-    // update UI optimistically
+    // OPTIMISTIC UPDATE
     setSellers((prev) =>
       prev.map((s) =>
         s.docId === docId
-          ? { ...s, verified: doApprove, rejected: !doApprove && true }
+          ? { ...s, verified: doApprove, rejected: !doApprove }
           : s
       )
     );
 
     try {
       const res = await axios.post(
-        `${BASE}/aimdev/api/admin/settings/seller/verify`,
+        `${BASE}/api/admin/settings/seller/verify`,
         null,
         {
-          params: {
-            sellerId, // backend accepts id or code
-            status: doApprove, // true/false
-          },
+          params: { sellerId, status: doApprove },
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      // backend returns a message string; show it
-      toast.success(typeof res.data === "string" ? res.data : "Updated seller status.");
-    } catch (err) {
-      console.error("Verify error:", err);
-      toast.error("Failed to update seller. Reverting UI.");
-
-      // revert UI on error
-      setSellers((prev) =>
-        prev.map((s) =>
-          s.docId === docId ? { ...s, verified: false, rejected: false } : s
-        )
-      );
+      toast.success(res.data);
+    } catch {
+      toast.error("Failed updating seller");
     } finally {
-      // clear loading
-      setLoadingAction((prev) => {
-        const c = { ...prev };
+      setLoadingAction((p) => {
+        const c = { ...p };
         delete c[docId];
         return c;
       });
     }
   };
 
-  // download documents (example)
+  // ----------------------------
+  // DOWNLOAD DOCUMENTS
+  // ----------------------------
   const handleDownloadDocs = async (seller) => {
-    if (!token) return toast.error("Not authenticated.");
+    if (!token) return;
+
     const id = seller.docId;
-    setLoadingAction((prev) => ({ ...prev, [id]: "downloading" }));
+    setLoadingAction((p) => ({ ...p, [id]: "downloading" }));
+
     try {
-      // assume backend has endpoint to get all docs by sellerId (adjust if different)
       const resp = await axios.get(
-        `${BASE}/aimdev/api/admin/seller/${seller.sellerId}/documents`,
-        { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" }
+        `${BASE}/api/admin/seller/${seller.sellerId}/documents`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
       );
-      // create blob download
+
       const url = window.URL.createObjectURL(new Blob([resp.data]));
       const a = document.createElement("a");
       a.href = url;
@@ -253,27 +244,30 @@ export default function AdminSellers() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast.success("Downloaded documents.");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to download documents.");
+
+      toast.success("Downloaded documents");
+    } catch {
+      toast.error("Failed to download");
     } finally {
-      setLoadingAction((prev) => {
-        const c = { ...prev };
+      setLoadingAction((p) => {
+        const c = { ...p };
         delete c[id];
         return c;
       });
     }
   };
 
-  return (
+  // ----------------------------
+  // UI
+  
+   return (
     <div className="flex min-h-screen bg-muted/30">
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <div className="flex-1">
         <header className="bg-white border-b p-4">
           <h1 className="text-2xl font-bold text-primary">Seller Verification</h1>
-          <p className="text-muted-foreground">Review and verify seller applications</p>
+          <p className="text-muted-foreground">Review & take actions on seller applications</p>
         </header>
 
         <main className="p-6">
@@ -286,6 +280,7 @@ export default function AdminSellers() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full md:w-auto">
+                  {/* Search */}
                   <div className="relative flex-1 sm:flex-none max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -296,9 +291,9 @@ export default function AdminSellers() {
                     />
                   </div>
 
+                  {/* Filter */}
                   <div className="flex items-center gap-2">
                     <div className="hidden sm:flex gap-2">
-                      {/* Filter chips */}
                       {["all", "verified", "pending", "rejected"].map((f) => (
                         <button
                           key={f}
@@ -360,33 +355,35 @@ export default function AdminSellers() {
                       <TableRow
                         key={s.docId}
                         className={`transition-transform duration-200 ${
-                          loadingAction[s.docId] ? "opacity-80 scale-98" : "hover:scale-101"
+                          loadingAction[s.docId] ? "opacity-80 scale-98" : "hover:scale-[1.01]"
                         }`}
                       >
+                        {/* Image */}
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden">
-                              {s.imageUrl ? (
-                                <img
-                                  src={buildImageUrl(s.imageUrl)}
-                                  alt={s.fullName}
-                                  className="w-full h-full object-cover"
-                                  width={40}
-                                  height={40}
-                                />
-                              ) : (
-                                <SellerImage imageId={null} width={40} height={40} />
-                              )}
-                            </div>
+                          <div className="w-10 h-10 rounded-full overflow-hidden">
+                            {s.imageUrl ? (
+                              <AuthImage
+                                src={buildImageUrl(s.imageUrl)}
+                                token={token}
+                                alt={s.fullName}
+                                className="w-full h-full object-cover"
+                                width={40}
+                                height={40}
+                              />
+                            ) : (
+                              <SellerImage imageId={null} width={40} height={40} />
+                            )}
                           </div>
                         </TableCell>
 
+                        {/* Seller Info */}
                         <TableCell>
                           <p className="font-medium">{s.fullName}</p>
                           <p className="text-xs text-muted-foreground">{s.email}</p>
                           <p className="text-xs text-muted-foreground">{s.sellerId}</p>
                         </TableCell>
 
+                        {/* Status */}
                         <TableCell>
                           <Badge
                             className={
@@ -401,6 +398,7 @@ export default function AdminSellers() {
                           </Badge>
                         </TableCell>
 
+                        {/* Created At */}
                         <TableCell>
                           <p className="text-sm text-muted-foreground">
                             {s.raw?.createdAt
@@ -409,8 +407,11 @@ export default function AdminSellers() {
                           </p>
                         </TableCell>
 
+                        {/* Actions */}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+
+                            {/* Review Modal */}
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button
@@ -427,7 +428,7 @@ export default function AdminSellers() {
                                 <DialogHeader>
                                   <DialogTitle>Seller Details</DialogTitle>
                                   <DialogDescription>
-                                    Review info & documents before approving
+                                    Review the seller before approving.
                                   </DialogDescription>
                                 </DialogHeader>
 
@@ -438,11 +439,13 @@ export default function AdminSellers() {
                                     onDownload={handleDownloadDocs}
                                     loadingAction={loadingAction}
                                     buildImageUrl={buildImageUrl}
+                                    token={token}
                                   />
                                 )}
                               </DialogContent>
                             </Dialog>
 
+                            {/* More Menu */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -455,8 +458,7 @@ export default function AdminSellers() {
                                     onClick={() => handleVerify(s.docId, s.sellerId, true)}
                                     className="text-green-600 flex items-center gap-2"
                                   >
-                                    <CheckCircle className="h-4 w-4" />
-                                    Approve
+                                    <CheckCircle className="h-4 w-4" /> Approve
                                   </DropdownMenuItem>
                                 )}
 
@@ -464,16 +466,14 @@ export default function AdminSellers() {
                                   onClick={() => handleVerify(s.docId, s.sellerId, false)}
                                   className="text-red-600 flex items-center gap-2"
                                 >
-                                  <XCircle className="h-4 w-4" />
-                                  Reject
+                                  <XCircle className="h-4 w-4" /> Reject
                                 </DropdownMenuItem>
 
                                 <DropdownMenuItem
                                   onClick={() => handleDownloadDocs(s)}
                                   className="flex items-center gap-2"
                                 >
-                                  <Download className="h-4 w-4" />
-                                  Download Documents
+                                  <Download className="h-4 w-4" /> Download Documents
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -493,11 +493,11 @@ export default function AdminSellers() {
                 </Table>
               </div>
 
-              {/* Pagination Controls */}
+              {/* Pagination */}
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-muted-foreground">
-                    Showing {(page - 1) * pageSize + 1} -{" "}
+                    Showing {(page - 1) * pageSize + 1} –{" "}
                     {Math.min(page * pageSize, total)} of {total}
                   </p>
 
@@ -522,12 +522,11 @@ export default function AdminSellers() {
                     variant="outline"
                     size="sm"
                     disabled={page === 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    onClick={() => setPage(page - 1)}
                   >
                     Prev
                   </Button>
 
-                  {/* page numbers (show up to 7 with window) */}
                   <div className="flex items-center gap-1">
                     {renderPageNumbers(page, totalPages, setPage)}
                   </div>
@@ -536,7 +535,7 @@ export default function AdminSellers() {
                     variant="outline"
                     size="sm"
                     disabled={page === totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() => setPage(page + 1)}
                   >
                     Next
                   </Button>
@@ -550,14 +549,14 @@ export default function AdminSellers() {
   );
 }
 
-/* -------------------------
-   Helper: render page numbers
-   ------------------------- */
+/* PAGE NUMBERS */
 function renderPageNumbers(current, totalPages, setPage) {
   const pages = [];
   const maxButtons = 7;
+
   let start = Math.max(1, current - Math.floor(maxButtons / 2));
   let end = start + maxButtons - 1;
+
   if (end > totalPages) {
     end = totalPages;
     start = Math.max(1, end - maxButtons + 1);
@@ -566,7 +565,9 @@ function renderPageNumbers(current, totalPages, setPage) {
   if (start > 1) pages.push(pageButton(1, current, setPage));
   if (start > 2) pages.push(<span key="dots-start">...</span>);
 
-  for (let i = start; i <= end; i++) pages.push(pageButton(i, current, setPage));
+  for (let i = start; i <= end; i++) {
+    pages.push(pageButton(i, current, setPage));
+  }
 
   if (end < totalPages - 1) pages.push(<span key="dots-end">...</span>);
   if (end < totalPages) pages.push(pageButton(totalPages, current, setPage));
@@ -588,10 +589,8 @@ function pageButton(i, current, setPage) {
   );
 }
 
-/* -------------------------
-   Seller Details Modal
-   ------------------------- */
-function SellerDetailsModal({ seller, onVerify, onDownload, loadingAction, buildImageUrl }) {
+/* SELLER DETAILS MODAL */
+function SellerDetailsModal({ seller, onVerify, onDownload, loadingAction, buildImageUrl, token }) {
   if (!seller) return null;
 
   const isLoading = !!loadingAction[seller.docId];
@@ -600,8 +599,9 @@ function SellerDetailsModal({ seller, onVerify, onDownload, loadingAction, build
     <div className="space-y-6">
       <div className="flex justify-center">
         {seller.imageUrl ? (
-          <img
+          <AuthImage
             src={buildImageUrl(seller.imageUrl)}
+            token={token}
             alt={seller.fullName}
             className="w-32 h-32 rounded-full object-cover"
           />
@@ -627,12 +627,10 @@ function SellerDetailsModal({ seller, onVerify, onDownload, loadingAction, build
           <p>{seller.sellerId}</p>
 
           <p className="text-sm text-muted-foreground mt-3">GST</p>
-          <p>{seller.gst}</p>
+          <p>{seller.gst || "-"}</p>
 
           <p className="text-sm text-muted-foreground mt-3">PAN / Aadhaar</p>
-          <p>
-            {seller.pan ?? seller.raw?.panCard} / {seller.aadhaar ?? seller.raw?.adhaar}
-          </p>
+          <p>{seller.pan || "-"} / {seller.aadhaar || "-"}</p>
         </div>
       </div>
 
@@ -642,7 +640,9 @@ function SellerDetailsModal({ seller, onVerify, onDownload, loadingAction, build
           onClick={() => onVerify(seller.docId, seller.sellerId, false)}
           disabled={isLoading}
         >
-          {loadingActionLabel(loadingAction[seller.docId], "reject", "Reject Application")}
+          {isLoading && loadingAction[seller.docId] === "reject"
+            ? "Rejecting..."
+            : "Reject"}
         </Button>
 
         {!seller.verified && (
@@ -651,36 +651,21 @@ function SellerDetailsModal({ seller, onVerify, onDownload, loadingAction, build
             onClick={() => onVerify(seller.docId, seller.sellerId, true)}
             disabled={isLoading}
           >
-            {loadingActionLabel(loadingAction[seller.docId], "approve", "Approve Seller")}
+            {isLoading && loadingAction[seller.docId] === "approve"
+              ? "Approving..."
+              : "Approve"}
           </Button>
         )}
 
-        <Button onClick={() => onDownload && onDownload(seller)} disabled={isLoading}>
-          {loadingActionLabel(loadingAction[seller.docId], "downloading", "Download Docs")}
+        <Button
+          onClick={() => onDownload(seller)}
+          disabled={isLoading}
+        >
+          {isLoading && loadingAction[seller.docId] === "downloading"
+            ? "Downloading..."
+            : "Download Docs"}
         </Button>
       </div>
     </div>
   );
-}
-
-/* small helper for action button text */
-function loadingActionLabel(current, expected, defaultLabel) {
-  if (!current) return defaultLabel;
-  if (current === expected) {
-    return (
-      <span className="inline-flex items-center gap-2">
-        <svg
-          className="animate-spin h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-        </svg>
-        {expected === "approve" ? "Approving..." : expected === "reject" ? "Rejecting..." : "Downloading..."}
-      </span>
-    );
-  }
-  return defaultLabel;
 }

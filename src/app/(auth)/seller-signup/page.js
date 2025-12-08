@@ -294,7 +294,7 @@ export default function SignUp() {
 
                 {/* Image Upload */}
                 <div>
-                  <Label>Profile Image</Label>
+                  <Label>Your Image</Label>
                   <div className="relative">
                     <Image className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input

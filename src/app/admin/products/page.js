@@ -3,26 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import axios from "axios";
-import { useRouter } from "next/navigation";
 import AdminSidebar from "@/components/ui-components/admin-sidebar";
-import { Search, Edit, Check, X, Eye } from "lucide-react";
-import {
-  get_carts_admin_url,
-  cart_save_url,
-  file_img_url,
-} from "@/constants/backend-urls";
+import { Search, Trash2, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -31,398 +17,258 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-const ProductsPage = () => {
-  const [activeTab, setActiveTab] = useState("products");
-  const router = useRouter();
+const BASE = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") || "";
+const API_PREFIX = `${BASE}/aimdev`;
+
+export default function ProductsPage() {
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [search, setSearch] = useState("");
+
+  // Paging & Sorting
+  const [page, setPage] = useState(0);
+  const [size] = useState(10);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [direction, setDirection] = useState("desc");
+
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
-  const [editForm, setEditForm] = useState({
-    enabled: false,
-    varified: false,
-  });
-const [tk, setTk] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("user-storage");
-    if (token) {
-      const parsedToken = JSON.parse(token);
-      setTk(parsedToken.state.user.accessToken);
-    } else {
-      alert("Please Login");
-      router.push("/admin/login");
-    }
-  }, [router]);
-  // Authentication check
-  // Fetch products
+  // Build full image URL
+  const imageSrc = (relative) => `${API_PREFIX}${relative}`;
+
+  // Fetch ADMIN PRODUCTS
   const fetchProducts = async () => {
-    if (!tk) return;
-
-    try {
-      setLoading(true);
-      const response = await axios.get(get_carts_admin_url, {
-        headers: {
-          Authorization: `Bearer ${tk}`,
-        },
-      });
-
-      console.log("Products response:", response.data);
-
-      if (response.data?.status === "SUCCESS") {
-        setProducts(response.data.data.carts || []);
-        setFilteredProducts(response.data.data.carts || []);
-      } else {
-        toast.error("Failed to fetch products");
-      }
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      toast.error("Failed to fetch products");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tk) {
-      fetchProducts();
-    }
-  }, [tk]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Search functionality
-  useEffect(() => {
-    const filtered = products.filter(
-      (product) =>
-        product.pname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.seller?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.vendor?.userName?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredProducts(filtered);
-  }, [searchQuery, products]);
-
-  // Handle edit product
-  const handleEditProduct = (product) => {
-    setEditingProduct(product);
-    setEditForm({
-      enabled: product.enabled,
-      varified: product.varified,
-    });
-    setIsEditModalOpen(true);
-  };
-
-  // Handle form change
-  const handleFormChange = (field, value) => {
-    setEditForm((prev) => ({
-      ...prev,
-      [field]: value === "true",
-    }));
-  };
-
-  // Save product changes
-  const handleSaveChanges = async () => {
-    if (!tk || !editingProduct) return;
-
     try {
       setLoading(true);
 
-      const updatedProduct = {
-        ...editingProduct,
-        enabled: editForm.enabled,
-        varified: editForm.varified,
-      };
+      const tk =
+        JSON.parse(localStorage.getItem("user-storage"))?.state?.user?.accessToken;
 
-      const response = await axios.post(cart_save_url, updatedProduct, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${tk}`,
-        },
-      });
-
-      console.log("Update response:", response.data);
-
-      if (response.data?.status === "SUCCESS") {
-        // Update the product in local state
-        setProducts((prev) =>
-          prev.map((product) =>
-            product.docId === editingProduct.docId
-              ? { ...product, enabled: editForm.enabled, varified: editForm.varified }
-              : product
-          )
-        );
-
-        toast.success("Product updated successfully");
-        setIsEditModalOpen(false);
-        setEditingProduct(null);
-      } else {
-        throw new Error(response.data?.message || "Failed to update product");
-      }
-    } catch (error) {
-      console.error("Error updating product:", error);
-      toast.error(
-        error.response?.data?.message || error.message || "Failed to update product"
+      const res = await axios.get(
+        `${API_PREFIX}/api/admin/product/list?page=${page}&size=${size}&sortBy=${sortBy}&direction=${direction}`,
+        {
+          headers: { Authorization: `Bearer ${tk}` },
+        }
       );
+
+      const data = res.data?.data?.data;
+      setProducts(data?.products || []);
+      setTotalPages(data?.totalPages || 1);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
   };
 
-  // Get status badge class
-  const getStatusBadge = (varified) => {
-    if (varified === true) return "bg-green-100 text-green-800";
-    if (varified === false) return "bg-red-100 text-red-800";
-    return "bg-gray-100 text-gray-800";
-  };
+  useEffect(() => {
+    fetchProducts();
+  }, [page, sortBy, direction]);
 
-  // Get enabled badge class
-  const getEnabledBadge = (enabled) => {
-    return enabled ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800";
-  };
-
-  if (loading && products.length === 0) {
+  // Search filter
+  const filtered = products.filter((p) => {
+    const q = search.toLowerCase();
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-lg">Loading products...</div>
+      p.name?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q) ||
+      (p.categoryName || "").toLowerCase().includes(q) ||
+      (p.sellerName || "").toLowerCase().includes(q)
+    );
+  });
+
+  // Sort toggle
+  const toggleSort = (key) => {
+    if (sortBy === key) {
+      setDirection(direction === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(key);
+      setDirection("asc");
+    }
+  };
+
+  // DELETE PRODUCT
+  const deleteProduct = async (id) => {
+    try {
+      if (!confirm("Delete this product?")) return;
+
+      const tk =
+        JSON.parse(localStorage.getItem("user-storage"))?.state?.user?.accessToken;
+
+      const res = await axios.delete(`${API_PREFIX}/api/seller/product/${id}`, {
+        headers: { Authorization: `Bearer ${tk}` },
+      });
+
+      if (res.data?.status === "SUCCESS") {
+        toast.success("Product deleted");
+        fetchProducts();
+      } else {
+        toast.error(res.data?.message || "Delete failed");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Delete failed");
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-64 text-lg">
+        Loading...
       </div>
     );
-  }
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-    <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-    <div className="flex-1">
-    <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-primary">
-            Product Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search products, sellers, categories..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Total Products: {filteredProducts.length}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen bg-muted/20">
+      <AdminSidebar activeTab="products" />
 
-      {/* Products Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
+      <main className="flex-1 p-8">
+        {/* Header */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-primary">
+              Products
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="relative max-w-sm w-full">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  className="pl-8 border rounded-md w-full py-2"
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                Page {page + 1} of {totalPages}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Table */}
+        <Card className="mt-5">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Price</TableHead>
+                  <TableHead onClick={() => toggleSort("name")}>
+                    Product <ArrowUpDown className="inline w-4 h-4 ml-1" />
+                  </TableHead>
+
+                  <TableHead onClick={() => toggleSort("price")}>
+                    Price <ArrowUpDown className="inline w-4 h-4 ml-1" />
+                  </TableHead>
+
                   <TableHead>Category</TableHead>
-                  <TableHead>Inventory</TableHead>
-                  <TableHead>Seller/Vendor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Enabled</TableHead>
+                  <TableHead>Stock</TableHead>
+
+                  <TableHead>
+                    Seller (ID)
+                  </TableHead>
+
+                  <TableHead>Images</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.docId} className="hover:bg-muted/50">
+                {filtered.map((p) => (
+                  <TableRow key={p.productId} className="hover:bg-muted/30">
                     <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="relative w-12 h-12 rounded-md overflow-hidden border">
-                          {product.imageId ? (
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded border overflow-hidden bg-gray-100">
+                          {p.imageUrls?.length > 0 ? (
                             <Image
-                              src={file_img_url(product.imageId)}
-                              alt={product.pname}
+                              src={imageSrc(p.imageUrls[0])}
+                              alt={p.name}
                               fill
                               className="object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-xs text-gray-500">No Image</span>
+                            <div className="text-xs flex items-center justify-center w-full h-full text-gray-500">
+                              No Image
                             </div>
                           )}
                         </div>
+
                         <div>
-                          <p className="font-medium">{product.pname}</p>
-                          <p className="text-sm text-muted-foreground">
-                            ID: {product.docId}
-                          </p>
+                          <div className="font-semibold">{p.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {p.productId}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
+
+                    <TableCell>₹{p.price}</TableCell>
+                    <TableCell>{p.categoryName || "N/A"}</TableCell>
+                    <TableCell>{p.stock}</TableCell>
+
                     <TableCell>
-                      <div>
-                        <p className="font-medium">${product.price}</p>
-                        {product.offer > 0 && (
-                          <p className="text-sm text-green-600">
-                            -{product.offer}% off
-                          </p>
-                        )}
+                      {p.sellerName || "N/A"}{" "}
+                      <span className="text-xs text-gray-500">
+                        (ID: {p.sellerId})
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {(p.imageUrls || []).slice(0, 3).map((u) => (
+                          <div
+                            key={u}
+                            className="relative w-8 h-8 border rounded overflow-hidden"
+                          >
+                            <Image
+                              src={imageSrc(u)}
+                              alt="img"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <span className="capitalize">
-                        {product.category || "N/A"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p>Stock: {product.totalItem}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Sold: {product.soldItem}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {product.seller ? (
-                        <div>
-                          <p className="text-sm font-medium">
-                            {product.seller.userName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Seller</p>
-                        </div>
-                      ) : product.vendor ? (
-                        <div>
-                          <p className="text-sm font-medium">
-                            {product.vendor.userName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Vendor</p>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(
-                          product.varified
-                        )}`}
-                      >
-                        {product.varified ? "Verified" : "Not Verified"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getEnabledBadge(
-                          product.enabled
-                        )}`}
-                      >
-                        {product.enabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </TableCell>
+
                     <TableCell>
                       <Button
-                        variant="outline"
                         size="sm"
-                        onClick={() => handleEditProduct(product)}
-                        className="h-8"
+                        variant="destructive"
+                        onClick={() => deleteProduct(p.productId)}
                       >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Edit Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Product Status</DialogTitle>
-          </DialogHeader>
-          {editingProduct && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium">{editingProduct.pname}</h3>
-                <p className="text-sm text-muted-foreground">
-                  ID: {editingProduct.docId}
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="enabled">Enabled Status</Label>
-                  <Select
-                    value={editForm.enabled.toString()}
-                    onValueChange={(value) => handleFormChange("enabled", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Enabled</SelectItem>
-                      <SelectItem value="false">Disabled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Pagination */}
+        <div className="flex justify-center mt-5 gap-3">
+          <Button
+            disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}
+            variant="outline"
+          >
+            Prev
+          </Button>
 
-                <div>
-                  <Label htmlFor="varified">Verification Status</Label>
-                  <Select
-                    value={editForm.varified.toString()}
-                    onValueChange={(value) => handleFormChange("varified", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Verified</SelectItem>
-                      <SelectItem value="false">Not Verified</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveChanges}
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-    </div>
+          <Button
+            disabled={page + 1 >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            variant="outline"
+          >
+            Next
+          </Button>
+        </div>
+      </main>
     </div>
   );
-};
-
-export default ProductsPage;
+}
