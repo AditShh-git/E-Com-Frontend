@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+// import axios from "axios"; // ❌ Commented - no backend
 import { Eye, EyeOff, Mail, Lock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -32,48 +32,69 @@ export default function AdminLogin() {
     password: "",
   });
 
-  const ADMIN_LOGIN_URL =
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api/auth/admin/signin`;
+  // ❌ Commented - Backend URL
+  // const ADMIN_LOGIN_URL =
+  //   `${process.env.NEXT_PUBLIC_BACKEND_URL}/aimdev/api/auth/admin/signin`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    //  Clear old user/seller tokens
+    // 🔥 Clear old user/seller tokens
     localStorage.removeItem("user-storage");
 
     try {
-      const res = await axios.post(
-        ADMIN_LOGIN_URL,
-        {
-          email: formData.email,
-          password: formData.password,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      // ❌ Commented - Backend API call
+      // const res = await axios.post(
+      //   ADMIN_LOGIN_URL,
+      //   {
+      //     email: formData.email,
+      //     password: formData.password,
+      //   },
+      //   {
+      //     headers: { "Content-Type": "application/json" },
+      //   }
+      // );
 
-      if (res.data.status !== "SUCCESS") {
-        toast.error("Invalid admin credentials");
-        return;
-      }
+      // if (res.data.status !== "SUCCESS") {
+      //   toast.error("Invalid admin credentials");
+      //   return;
+      // }
 
-      const data = res.data.data;
+      // const data = res.data.data;
 
-      if (data.role !== "ADMIN") {
-        toast.error("Access denied! Only admins can login.");
-        return;
-      }
+      // if (data.role !== "ADMIN") {
+      //   toast.error("Access denied! Only admins can login.");
+      //   return;
+      // }
 
-      // Store admin info
-      login(data, data.accessToken, "ADMIN");
+      // // Store admin info
+      // login(data, data.accessToken, "ADMIN");
+
+      // ✅ Frontend-only mock login
+      const mockAdminData = {
+        id: "mock-admin-123",
+        email: formData.email,
+        role: "ADMIN",
+        name: "Admin User"
+      };
+      
+      const mockToken = "mock-jwt-token-123";
+      
+      // Store mock admin info
+      login(mockAdminData, mockToken, "ADMIN");
 
       toast.success("Admin login successful!");
+      
+      // ✅ Redirect to admin dashboard
       router.push("/admin/dashboard");
 
     } catch (err) {
-      toast.error("Invalid email or password");
+      // ❌ Commented - Backend error handling
+      // toast.error("Invalid email or password");
+      
+      // ✅ Frontend-only error handling
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -149,12 +170,11 @@ export default function AdminLogin() {
               </Link>
             </p>
             <p className="text-center text-sm">
-  Didn’t receive email?{" "}
-  <Link href="/resend-verification" className="text-primary underline">
-    Resend Verification
-  </Link>
-</p>
-
+              Didn't receive email?{" "}
+              <Link href="/resend-verification" className="text-primary underline">
+                Resend Verification
+              </Link>
+            </p>
 
           </CardFooter>
         </form>

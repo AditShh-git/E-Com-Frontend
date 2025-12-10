@@ -69,6 +69,9 @@ export default function Header() {
   const fetchCart = useCartStore((state) => state.fetchCart);
   const cartCount = cartItems.length;
 
+  // ⭐ NOTIFICATIONS (You can add a store later for actual notification count)
+  const [notificationCount, setNotificationCount] = useState(3); // Replace with actual store
+
   const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -83,7 +86,7 @@ export default function Header() {
   }, [isLoggedIn]);
 
   const mainNavItems = [
-    { name: "Home", href: "/dashboard" },
+    { name: "Home", href: "/" },
     {
       name: "Categories",
       href: "#",
@@ -322,10 +325,6 @@ export default function Header() {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
-                  <Link href="/account"><Bell className="mr-2 h-4 w-4" /> Notifications</Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
                   <Link href="/account"><Settings className="mr-2 h-4 w-4" /> Settings</Link>
                 </DropdownMenuItem>
 
@@ -338,7 +337,7 @@ export default function Header() {
             </DropdownMenu>
           ) : (
             <Button variant="ghost" size="icon" asChild>
-              <Link href="/signin"><User className="h-5 w-5" /></Link>
+              <Link href="/get-started"><User className="h-5 w-5" /></Link>
             </Button>
           )}
 
@@ -349,6 +348,18 @@ export default function Header() {
               {wishlistCount > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center bg-primary text-white p-0">
                   {wishlistCount}
+                </Badge>
+              )}
+            </Link>
+          </Button>
+
+          {/* Notifications (NEW - placed after wishlist) */}
+          <Button variant="ghost" size="icon" className="relative hidden sm:flex" asChild>
+            <Link href="/notifications">
+              <Bell className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center bg-primary text-white p-0">
+                  {notificationCount}
                 </Badge>
               )}
             </Link>
@@ -398,3 +409,4 @@ export default function Header() {
     </header>
   );
 }
+

@@ -3,30 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, Phone, User } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import axios from "axios";
-import { consumer_signup_url } from "@/constants/backend-urls";
+// import axios from "axios"; // ❌ Commented - no backend
+// import { consumer_signup_url } from "@/constants/backend-urls"; // ❌ Commented - no backend
 
 export default function SignUp() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
+    confirmPassword: "",
   });
 
   const router = useRouter();
@@ -38,33 +33,57 @@ export default function SignUp() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!agreedToTerms) {
+      toast.error("Please agree to the Terms and Conditions");
+      return;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      const payload = {
-        fullName: formData.name,
-        email: formData.email,
-        phoneNo: formData.phone,
-        password: formData.password,
-      };
+      // ❌ Commented - Backend API call
+      // const payload = {
+      //   fullName: formData.name,
+      //   email: formData.email,
+      //   phoneNo: formData.phone,
+      //   password: formData.password,
+      // };
 
-      const res = await axios.post(consumer_signup_url, payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+      // const res = await axios.post(consumer_signup_url, payload, {
+      //   headers: { "Content-Type": "application/json" },
+      // });
 
-      console.log("SIGNUP RESPONSE:", res.data);
+      // console.log("SIGNUP RESPONSE:", res.data);
 
-      if (res.data.status === "SUCCESS") {
-        toast.success("Account created successfully. Please verify your email.");
-        router.push("/signin");
-      } else {
-        toast.error(
-          res?.data?.error?.errors?.[0]?.message ||
-            "Please check your information and try again."
-        );
-      }
+      // if (res.data.status === "SUCCESS") {
+      //   toast.success("Account created successfully. Please verify your email.");
+      //   router.push("/signin");
+      // } else {
+      //   toast.error(
+      //     res?.data?.error?.errors?.[0]?.message ||
+      //       "Please check your information and try again."
+      //   );
+      // }
+
+      // ✅ Frontend-only mock signup
+      console.log("Signup submitted:", formData);
+      toast.success("Account created successfully. Please verify your email.");
+      
+      // ✅ Redirect to signin page
+      router.push("/signin");
+
     } catch (error) {
-      console.log("SIGNUP ERROR:", error);
+      // ❌ Commented - Backend error handling
+      // console.log("SIGNUP ERROR:", error);
+      // toast.error("Something went wrong. Please try again.");
+      
+      // ✅ Frontend-only error handling
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -72,113 +91,156 @@ export default function SignUp() {
   };
 
   return (
-    <div className="flex min-h-[86vh] items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-primary">
-            Create an Account
-          </CardTitle>
-          <CardDescription className="text-center">
-            Enter your information to create an account
-          </CardDescription>
-        </CardHeader>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md space-y-8">
+        
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {/* Full Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="John Doe"
-                  className="pl-10"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+        {/* Form */}
+        <div className="space-y-5">
+          
+          {/* Full Name Field */}
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm font-medium text-gray-900">
+              Full Name
+            </Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="Enter your full name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-0"
+              required
+            />
+          </div>
+
+          {/* Email Field */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-900">
+              Email
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-0"
+              required
+            />
+          </div>
+
+          {/* Phone Number Field */}
+          <div className="space-y-2">
+            <Label htmlFor="phone" className="text-sm font-medium text-gray-900">
+              Phone Number (optional)
+            </Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="Enter your phone number"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-0"
+            />
+          </div>
+
+          {/* Password Field */}
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-gray-900">
+              Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-10 text-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-0"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+          </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  className="pl-10"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+          {/* Confirm Password Field */}
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-900">
+              Confirm Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-10 text-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-0"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+          </div>
 
-            {/* Phone */}
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  placeholder="+91 1234567890"
-                  className="pl-10"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            </div>
+          {/* Terms and Conditions Checkbox */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="terms"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+            <label htmlFor="terms" className="text-sm text-gray-700">
+              I agree to the{" "}
+              <a href="/terms" className="text-pink-600 hover:text-pink-700">
+                Terms and Conditions
+              </a>
+            </label>
+          </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  className="pl-10 pr-10"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-10 w-10 text-muted-foreground"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
+          {/* Register Button */}
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="w-full rounded-full bg-gradient-to-r from-pink-600 to-red-600 py-6 text-base font-medium text-white hover:from-pink-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
+          >
+            {isLoading ? "Creating account..." : "Register"}
+          </Button>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full mt-5" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up"}
-            </Button>
-
-            <div className="text-center text-sm">
+          {/* Already have account Link */}
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/signin" className="text-primary hover:underline">
+              <Link href="/signin" className="font-medium text-pink-600 hover:text-pink-700">
                 Sign in
               </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

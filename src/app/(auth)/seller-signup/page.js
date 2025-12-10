@@ -27,8 +27,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import axios from "axios";
-import { seller_signup_url, file_upload_url, file_img_url } from "@/constants/backend-urls";
+// import axios from "axios";
+// import { seller_signup_url, file_upload_url, file_img_url } from "@/constants/backend-urls";
 
 export default function SignUp() {
   const router = useRouter();
@@ -89,6 +89,8 @@ export default function SignUp() {
       return;
     }
 
+    // ========== BACKEND CONNECTION COMMENTED ==========
+    /*
     const fd = new FormData();
     fd.append("fullName", formData.fullName);
     fd.append("email", formData.email);
@@ -134,6 +136,24 @@ export default function SignUp() {
         "Unexpected server error.";
 
       toast.error(backendMsg);
+    } finally {
+      setIsLoading(false);
+    }
+    */
+    // ========== END BACKEND CONNECTION ==========
+
+    // Frontend-only simulation
+    try {
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Mock successful signup
+      toast.success("Seller account created successfully (Frontend Only)");
+      
+      // Redirect to seller login
+      router.push("/seller-login");
+    } catch (err) {
+      toast.error("Signup failed");
     } finally {
       setIsLoading(false);
     }
@@ -341,3 +361,4 @@ export default function SignUp() {
     </div>
   );
 }
+

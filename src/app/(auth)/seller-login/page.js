@@ -19,13 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
-import axios from "axios";
+// import axios from "axios";
 
-import { seller_login_url } from "@/constants/backend-urls";
-import { useSellerStore } from "@/store/seller-store";
+// import { seller_login_url } from "@/constants/backend-urls";
+// import { useSellerStore } from "@/store/seller-store";
 
 export default function SellerSignIn() {
-  const { login } = useSellerStore();
+  // const { login } = useSellerStore();
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +40,8 @@ export default function SellerSignIn() {
     e.preventDefault();
     setIsLoading(true);
 
+    // ========== BACKEND CONNECTION COMMENTED ==========
+    /*
     try {
       const res = await axios.post(seller_login_url, formData);
 
@@ -62,6 +64,24 @@ export default function SellerSignIn() {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Seller login failed");
+    } finally {
+      setIsLoading(false);
+    }
+    */
+    // ========== END BACKEND CONNECTION ==========
+
+    // Frontend-only simulation
+    try {
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Mock successful login
+      toast.success("Seller login successful (Frontend Only)");
+      
+      // Redirect to seller dashboard
+      router.push("/seller-dashboard");
+    } catch (err) {
+      toast.error("Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -130,18 +150,16 @@ export default function SellerSignIn() {
             {/*  FORGOT PASSWORD LINK */}
             <p className="text-center text-sm">
               <Link href="/forgot-password" className="text-primary underline">
-  Forgot Password?
-</Link>
-
+                Forgot Password?
+              </Link>
             </p>
 
             <p className="text-center text-sm">
-  Didn’t receive email?{" "}
-  <Link href="/resend-verification" className="text-primary underline">
-    Resend Verification
-  </Link>
-</p>
-
+              Didn't receive email?{" "}
+              <Link href="/resend-verification" className="text-primary underline">
+                Resend Verification
+              </Link>
+            </p>
 
             <p className="text-center text-sm">
               Not a seller?{" "}
@@ -155,3 +173,4 @@ export default function SellerSignIn() {
     </div>
   );
 }
+
